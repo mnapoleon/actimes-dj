@@ -1,8 +1,10 @@
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.views.generic import ListView, FormView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
 import json
 
 from .models import Session, Lap
@@ -339,3 +341,28 @@ def session_data_api(_request, pk):
     }
 
     return JsonResponse(data)
+
+
+@require_POST
+def delete_driver_from_session(request, session_pk, driver_name):
+    """Delete a specific driver and all their laps from a session"""
+    session = get_object_or_404(Session, pk=session_pk)
+    
+    # Get the count of laps to be deleted for the message
+    laps_to_delete = session.laps.filter(driver_name=driver_name)
+    lap_count = laps_to_delete.count()
+    
+    if lap_count == 0:
+        messages.warning(
+            request, 
+            f'No laps found for driver "{driver_name}" in this session.'
+        )
+    else:
+        # Delete all laps for this driver in this session
+        laps_to_delete.delete()
+        messages.success(
+            request,
+            f'Successfully deleted {lap_count} lap(s) for driver "{driver_name}".'
+        )
+    
+    return redirect('session_detail', pk=session_pk)
