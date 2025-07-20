@@ -199,20 +199,3 @@ class JSONUploadForm(forms.Form):
         return file
 
 
-class SessionFilterForm(forms.Form):
-    """Form for filtering sessions and laps"""
-    session = forms.ModelChoiceField(
-        queryset=None,  # Will be set in __init__
-        required=False,
-        empty_label="Select a session",
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-
-    driver = forms.CharField(
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['session'].queryset = Session.objects.all()
