@@ -244,6 +244,24 @@ body {
   color: #ffffff !important;
 }
 
+/* Confirm Session Deletion button - make it white */
+.btn-danger {
+  background-color: #ffffff !important;
+  border-color: #dc3545 !important;
+  color: #dc3545 !important;
+}
+
+.btn-danger:hover {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #ffffff !important;
+}
+
+/* Confirm Session Deletion title - ensure it's white */
+.card-header.bg-danger .card-title {
+  color: #ffffff !important;
+}
+
 /* Responsive improvements */
 @media (max-width: 768px) {
   .container-fluid {

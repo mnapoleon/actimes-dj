@@ -18,7 +18,7 @@ class HomeView(FormView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['sessions'] = Session.objects.all()[:10]  # Latest 10 sessions
+        context['sessions'] = Session.objects.all().order_by('track')[:10]  # Latest 10 sessions sorted by track
         return context
     
     def _extract_session_type(self, data, session_data):
