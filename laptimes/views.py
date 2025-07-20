@@ -1,13 +1,12 @@
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.contrib import messages
 from django.views.generic import ListView, FormView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
-from django.db.models import Min, Max
 from django.http import JsonResponse
 import json
 
 from .models import Session, Lap
-from .forms import JSONUploadForm, SessionFilterForm, SessionEditForm
+from .forms import JSONUploadForm, SessionEditForm
 
 
 class HomeView(FormView):
@@ -15,59 +14,59 @@ class HomeView(FormView):
     template_name = 'laptimes/home.html'
     form_class = JSONUploadForm
     success_url = reverse_lazy('home')
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['sessions'] = Session.objects.all().order_by('track')[:10]  # Latest 10 sessions sorted by track
+        context['sessions'] = Session.objects.all().order_by(
+            'track')[:10]  # Latest 10 sessions sorted by track
         return context
-    
+
     def _extract_session_type(self, data, session_data):
         """Extract session type from __quickDrive or fallback to type field"""
         session_type = 'Practice'  # Default
-        
+
         # First try to extract from __quickDrive
         if '__quickDrive' in data:
-            session_type = self._parse_quick_drive_mode(data['__quickDrive'])
-        
+            session_type = self._parse_quick_drive_mode(
+                data['__quickDrive'])
+
         # Fall back to type field if __quickDrive parsing didn't work
         if session_type == 'Practice' and 'type' in session_data:
             # Map session type numbers to names
             type_map = {1: 'Practice', 2: 'Qualifying', 3: 'Race'}
             session_type = type_map.get(session_data['type'], 'Practice')
-        
+
         return session_type
-    
+
     def _parse_quick_drive_mode(self, quick_drive_str):
         """Parse the __quickDrive JSON string to extract mode"""
         try:
             quick_drive_data = json.loads(quick_drive_str)
             if 'Mode' not in quick_drive_data:
                 return 'Practice'
-            
+
             mode_path = quick_drive_data['Mode']
             # Extract last node from path like
             # "/Pages/Drive/QuickDrive_Trackday.xaml"
             if '/' not in mode_path:
                 return 'Practice'
-            
+
             # Get "QuickDrive_Trackday.xaml"
             last_part = mode_path.split('/')[-1]
             if last_part.endswith('.xaml'):
                 last_part = last_part[:-5]  # Remove ".xaml"
-            
+
             if last_part.startswith('QuickDrive_'):
                 # Remove "QuickDrive_" prefix
                 return last_part[11:]
             else:
                 return last_part
-                
+
         except (json.JSONDecodeError, KeyError):
             return 'Practice'
-    
+
     def form_valid(self, form):
         """Process uploaded JSON file and create Session/Lap objects"""
-        from django.utils.dateparse import parse_datetime
-        import re
         json_file = form.cleaned_data['json_file']
         try:
             # Parse JSON content
@@ -78,7 +77,8 @@ class HomeView(FormView):
             session_data = data['sessions'][0]
 
             # Extract session type using helper method
-            session_type = self._extract_session_type(data, session_data)
+            session_type = self._extract_session_type(
+                data, session_data)
 
             # Get car model from the first player (assuming all use same car)
             car_model = 'Unknown'
@@ -144,7 +144,7 @@ class SessionDetailView(ListView):
     template_name = 'laptimes/session_detail.html'
     context_object_name = 'laps'
     paginate_by = 50
-    
+
     def get_queryset(self):
         self.session = get_object_or_404(Session, pk=self.kwargs['pk'])
         queryset = Lap.objects.filter(session=self.session)
@@ -158,9 +158,11 @@ class SessionDetailView(ListView):
         sort_by = self.request.GET.get('sort', 'driver_name')
         if sort_by.startswith('sector') and sort_by.endswith('_time'):
             try:
-                sector_idx = int(sort_by.replace('sector', '').replace('_time', '')) - 1
+                sector_idx = int(
+                    sort_by.replace('sector', '').replace('_time', '')) - 1
                 laps = list(queryset)
-                laps.sort(key=lambda lap: lap.sectors[sector_idx] if len(lap.sectors) > sector_idx else float('inf'))
+                laps.sort(key=lambda lap: lap.sectors[sector_idx] if
+                          len(lap.sectors) > sector_idx else float('inf'))
                 return laps
             except Exception:
                 pass  # fallback to default
@@ -168,31 +170,35 @@ class SessionDetailView(ListView):
             queryset = queryset.order_by(sort_by)
 
         return queryset
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['session'] = self.session
-        
+
         # Get all laps for the session (for chart)
         all_laps = self.session.laps.all().order_by('lap_number')
         context['all_laps'] = all_laps
-        
+
         # Get unique drivers from the session
         context['drivers'] = list(self.session.laps.values_list(
             'driver_name', flat=True
         ).distinct().order_by('driver_name'))
-        
+
         # Get unique lap numbers for chart labels (excluding lap 0)
-        unique_lap_numbers = list(all_laps.filter(lap_number__gt=0).values_list('lap_number', flat=True).distinct().order_by('lap_number'))
+        unique_lap_numbers = list(
+            all_laps.filter(lap_number__gt=0).values_list(
+                'lap_number', flat=True).distinct().order_by(
+                'lap_number'))
         context['unique_lap_numbers'] = unique_lap_numbers
-        
+
         # Prepare chart data for each driver
         chart_data = {}
         for driver in context['drivers']:
             chart_data[driver] = {}
             for lap_number in unique_lap_numbers:
                 try:
-                    lap = all_laps.get(driver_name=driver, lap_number=lap_number)
+                    lap = all_laps.get(
+                        driver_name=driver, lap_number=lap_number)
                     chart_data[driver][lap_number] = lap.total_time
                 except Lap.DoesNotExist:
                     chart_data[driver][lap_number] = None
@@ -213,28 +219,33 @@ class SessionDetailView(ListView):
             else:
                 lap.sectors = []
 
-        # Row-level highlighting for total time (fastest, slowest, personal best)
+        # Row-level highlighting for total time (fastest, slowest, pb)
         laps = context['laps']
         if laps:
-            context['fastest_total'] = min(lap.total_time for lap in all_laps)
-            context['slowest_total'] = max(lap.total_time for lap in all_laps)
+            context['fastest_total'] = min(
+                lap.total_time for lap in all_laps)
+            context['slowest_total'] = max(
+                lap.total_time for lap in all_laps)
             # Personal best per driver
             driver_pb_total = {}
             for driver in context['drivers']:
-                driver_laps = [lap for lap in all_laps if lap.driver_name == driver]
+                driver_laps = [lap for lap in all_laps if
+                               lap.driver_name == driver]
                 if driver_laps:
-                    driver_pb_total[driver] = min(l.total_time for l in driver_laps)
+                    driver_pb_total[driver] = min(
+                        lap.total_time for lap in driver_laps)
             for lap in laps:
                 lap.is_pb_total = (
                     driver_pb_total.get(lap.driver_name) is not None and
                     lap.total_time == driver_pb_total[lap.driver_name]
                 )
 
-        # Calculate sector highlights: fastest, slowest, and personal best per driver for each sector
+        # Calculate sector highlights: fastest, slowest, and pb per driver
         sector_highlights = {}
         # Fastest and slowest overall for each sector
         for idx in range(context['sector_count']):
-            sector_times = [lap.sectors[idx] for lap in all_laps if len(lap.sectors) > idx]
+            sector_times = [lap.sectors[idx] for lap in all_laps if
+                            len(lap.sectors) > idx]
             if sector_times:
                 sector_highlights[idx] = {
                     'fastest': min(sector_times),
@@ -246,9 +257,11 @@ class SessionDetailView(ListView):
         # Build a dict: {driver: {sector_idx: pb_time}}
         driver_pb = {driver: {} for driver in context['drivers']}
         for driver in context['drivers']:
-            driver_laps = [lap for lap in all_laps if lap.driver_name == driver]
+            driver_laps = [lap for lap in all_laps if
+                           lap.driver_name == driver]
             for idx in range(context['sector_count']):
-                sector_times = [lap.sectors[idx] for lap in driver_laps if len(lap.sectors) > idx]
+                sector_times = [lap.sectors[idx] for lap in driver_laps
+                                if len(lap.sectors) > idx]
                 if sector_times:
                     driver_pb[driver][idx] = min(sector_times)
 
@@ -257,8 +270,10 @@ class SessionDetailView(ListView):
             lap.sector_highlights = {}
             for idx in range(context['sector_count']):
                 lap.sector_highlights[idx] = {
-                    'fastest': sector_highlights[idx]['fastest'] if idx in sector_highlights else None,
-                    'slowest': sector_highlights[idx]['slowest'] if idx in sector_highlights else None,
+                    'fastest': sector_highlights[idx]['fastest'] if
+                    idx in sector_highlights else None,
+                    'slowest': sector_highlights[idx]['slowest'] if
+                    idx in sector_highlights else None,
                     'pb': driver_pb.get(lap.driver_name, {}).get(idx)
                 }
 
@@ -272,7 +287,7 @@ class SessionEditView(UpdateView):
     form_class = SessionEditForm
     template_name = 'laptimes/session_edit.html'
     context_object_name = 'session'
-    
+
     def get_success_url(self):
         messages.success(
             self.request,
@@ -287,7 +302,7 @@ class SessionDeleteView(DeleteView):
     template_name = 'laptimes/session_confirm_delete.html'
     context_object_name = 'session'
     success_url = reverse_lazy('home')
-    
+
     def delete(self, request, *args, **kwargs):
         session = self.get_object()
         messages.success(
@@ -301,7 +316,7 @@ def session_data_api(_request, pk):
     """API endpoint to get session data as JSON"""
     session = get_object_or_404(Session, pk=pk)
     laps = session.laps.all()
-    
+
     data = {
         'session': {
             'id': session.id,
@@ -322,5 +337,5 @@ def session_data_api(_request, pk):
             for lap in laps
         ]
     }
-    
+
     return JsonResponse(data)

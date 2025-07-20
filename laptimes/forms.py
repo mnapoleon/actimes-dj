@@ -15,7 +15,10 @@ class SessionEditForm(forms.ModelForm):
     track_text = forms.CharField(
         label='Or enter a new track',
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Custom track name'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Custom track name'
+        })
     )
     track = forms.CharField(
         required=False,
@@ -30,7 +33,10 @@ class SessionEditForm(forms.ModelForm):
     car_text = forms.CharField(
         label='Or enter a new car',
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Custom car name'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Custom car name'
+        })
     )
     car = forms.CharField(
         required=False,
@@ -70,11 +76,17 @@ class SessionEditForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Populate dropdown with all distinct track names
-        tracks = Session.objects.values_list('track', flat=True).distinct().order_by('track')
-        self.fields['track_select'].choices = [('', '— Select a track —')] + [(t, t) for t in tracks if t]
+        tracks = Session.objects.values_list(
+            'track', flat=True).distinct().order_by('track')
+        self.fields['track_select'].choices = (
+            [('', '— Select a track —')] +
+            [(t, t) for t in tracks if t])
         # Populate dropdown with all distinct car names
-        cars = Session.objects.values_list('car', flat=True).distinct().order_by('car')
-        self.fields['car_select'].choices = [('', '— Select a car —')] + [(c, c) for c in cars if c]
+        cars = Session.objects.values_list(
+            'car', flat=True).distinct().order_by('car')
+        self.fields['car_select'].choices = (
+            [('', '— Select a car —')] +
+            [(c, c) for c in cars if c])
         # Set initial values for the fields
         if self.instance:
             if self.instance.track:
@@ -87,7 +99,8 @@ class SessionEditForm(forms.ModelForm):
                 self.fields['car'].initial = self.instance.car
             if self.instance.upload_date:
                 # Format for datetime-local input
-                self.fields['upload_date'].initial = self.instance.upload_date.strftime('%Y-%m-%dT%H:%M')
+                self.fields['upload_date'].initial = (
+                    self.instance.upload_date.strftime('%Y-%m-%dT%H:%M'))
 
     def clean(self):
         cleaned_data = super().clean()
@@ -99,7 +112,8 @@ class SessionEditForm(forms.ModelForm):
         elif track_select:
             cleaned_data['track'] = track_select
         else:
-            self.add_error('track_select', 'Please select or enter a track name.')
+            self.add_error(
+                'track_select', 'Please select or enter a track name.')
         self.fields['track'].initial = cleaned_data.get('track', '')
 
         # Car logic
@@ -117,8 +131,10 @@ class SessionEditForm(forms.ModelForm):
 
     def save(self, commit=True):
         # Ensure the correct track and car values are set on the instance
-        self.instance.track = self.cleaned_data.get('track', self.instance.track)
-        self.instance.car = self.cleaned_data.get('car', self.instance.car)
+        self.instance.track = self.cleaned_data.get(
+            'track', self.instance.track)
+        self.instance.car = self.cleaned_data.get(
+            'car', self.instance.car)
         return super().save(commit=commit)
 
 
@@ -132,20 +148,20 @@ class JSONUploadForm(forms.Form):
             'accept': '.json'
         })
     )
-    
+
     def clean_json_file(self):
         """Validate uploaded file is valid JSON with expected structure"""
         file = self.cleaned_data['json_file']
-        
+
         if not file.name.endswith('.json'):
             raise ValidationError('File must have .json extension')
-        
+
         try:
             # Read and parse JSON content
             file.seek(0)  # Reset file pointer
             content = file.read().decode('utf-8')
             data = json.loads(content)
-            
+
             # Validate basic structure
             required_fields = ['track', 'players', 'sessions']
             for field in required_fields:
@@ -153,33 +169,33 @@ class JSONUploadForm(forms.Form):
                     raise ValidationError(
                         f'JSON file missing required field: {field}'
                     )
-            
+
             # Validate that players is a list
             if not isinstance(data['players'], list):
                 raise ValidationError('Players data must be a list')
-                
+
             # Validate that sessions is a list and has at least one session
             if (not isinstance(data['sessions'], list) or
                     len(data['sessions']) == 0):
                 raise ValidationError(
                     'Sessions data must be a list with at least one session'
                 )
-            
+
             # Validate that the first session has laps
             if 'laps' not in data['sessions'][0]:
                 raise ValidationError('Session data missing laps field')
-                
+
             if not isinstance(data['sessions'][0]['laps'], list):
                 raise ValidationError('Session laps data must be a list')
-            
+
             # Reset file pointer for later use
             file.seek(0)
-            
+
         except json.JSONDecodeError:
             raise ValidationError('Invalid JSON file format')
         except UnicodeDecodeError:
             raise ValidationError('File encoding not supported')
-        
+
         return file
 
 
@@ -191,12 +207,12 @@ class SessionFilterForm(forms.Form):
         empty_label="Select a session",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
-    
+
     driver = forms.CharField(
         required=False,
         widget=forms.Select(attrs={'class': 'form-select'})
     )
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['session'].queryset = Session.objects.all()
