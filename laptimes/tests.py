@@ -1,1 +1,726 @@
-# Create your tests here.
+from django.test import TestCase, Client
+from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
+from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
+import json
+import tempfile
+
+from .models import Session, Lap
+from .forms import JSONUploadForm, SessionEditForm
+
+
+class SessionModelTests(TestCase):
+    """Test cases for the Session model"""
+
+    def setUp(self):
+        self.session = Session.objects.create(
+            session_name="Test Session",
+            track="Test Track",
+            car="Test Car",
+            session_type="Practice",
+            file_name="test.json",
+            players_data=[{"name": "Test Driver", "car": "Test Car"}]
+        )
+
+    def test_session_creation(self):
+        """Test that a session can be created with required fields"""
+        self.assertEqual(self.session.track, "Test Track")
+        self.assertEqual(self.session.car, "Test Car")
+        self.assertEqual(self.session.session_type, "Practice")
+        self.assertTrue(self.session.upload_date)
+
+    def test_session_str_with_name(self):
+        """Test string representation with session name"""
+        expected = "Test Session - Test Track - Test Car"
+        self.assertEqual(str(self.session), expected)
+
+    def test_session_str_without_name(self):
+        """Test string representation without session name"""
+        self.session.session_name = ""
+        self.session.save()
+        expected = "Test Track - Test Car (Practice)"
+        self.assertEqual(str(self.session), expected)
+
+    def test_session_ordering(self):
+        """Test that sessions are ordered by upload_date descending"""
+        session2 = Session.objects.create(
+            track="Track 2",
+            car="Car 2",
+            session_type="Race",
+            file_name="test2.json"
+        )
+        sessions = Session.objects.all()
+        self.assertEqual(sessions.first(), session2)
+
+    def test_get_drivers(self):
+        """Test getting unique drivers from session"""
+        Lap.objects.create(
+            session=self.session,
+            lap_number=1,
+            driver_name="Driver 1",
+            car_index=0,
+            total_time=90.5
+        )
+        Lap.objects.create(
+            session=self.session,
+            lap_number=2,
+            driver_name="Driver 2",
+            car_index=1,
+            total_time=91.0
+        )
+        drivers = self.session.get_drivers()
+        self.assertEqual(set(drivers), {"Driver 1", "Driver 2"})
+
+    def test_get_fastest_lap(self):
+        """Test getting the fastest lap in session"""
+        lap1 = Lap.objects.create(
+            session=self.session,
+            lap_number=1,
+            driver_name="Driver 1",
+            car_index=0,
+            total_time=90.5
+        )
+        lap2 = Lap.objects.create(
+            session=self.session,
+            lap_number=2,
+            driver_name="Driver 1",
+            car_index=0,
+            total_time=89.2
+        )
+        fastest = self.session.get_fastest_lap()
+        self.assertEqual(fastest, lap2)
+
+
+class LapModelTests(TestCase):
+    """Test cases for the Lap model"""
+
+    def setUp(self):
+        self.session = Session.objects.create(
+            track="Test Track",
+            car="Test Car",
+            session_type="Practice",
+            file_name="test.json"
+        )
+        self.lap = Lap.objects.create(
+            session=self.session,
+            lap_number=1,
+            driver_name="Test Driver",
+            car_index=0,
+            total_time=90.567,
+            sectors=[30.123, 30.234, 30.210],
+            tyre_compound="M",
+            cuts=0
+        )
+
+    def test_lap_creation(self):
+        """Test that a lap can be created with required fields"""
+        self.assertEqual(self.lap.lap_number, 1)
+        self.assertEqual(self.lap.driver_name, "Test Driver")
+        self.assertEqual(self.lap.total_time, 90.567)
+        self.assertEqual(self.lap.sectors, [30.123, 30.234, 30.210])
+
+    def test_lap_str(self):
+        """Test string representation of lap"""
+        expected = "Lap 1 - Test Driver (1:30.567)"
+        self.assertEqual(str(self.lap), expected)
+
+    def test_format_time(self):
+        """Test time formatting"""
+        self.assertEqual(self.lap.format_time(), "1:30.567")
+        
+        # Test with different time
+        self.lap.total_time = 125.123
+        self.assertEqual(self.lap.format_time(), "2:05.123")
+
+    def test_get_sector_times(self):
+        """Test getting sector times as list"""
+        self.assertEqual(self.lap.get_sector_times(), [30.123, 30.234, 30.210])
+        
+        # Test with no sectors
+        self.lap.sectors = None
+        self.assertEqual(self.lap.get_sector_times(), [])
+
+    def test_unique_together_constraint(self):
+        """Test that the unique constraint works"""
+        with self.assertRaises(Exception):
+            Lap.objects.create(
+                session=self.session,
+                lap_number=1,
+                driver_name="Another Driver",
+                car_index=0,  # Same session, lap_number, and car_index
+                total_time=91.0
+            )
+
+    def test_lap_ordering(self):
+        """Test that laps are ordered by session and lap_number"""
+        lap2 = Lap.objects.create(
+            session=self.session,
+            lap_number=2,
+            driver_name="Test Driver",
+            car_index=0,
+            total_time=91.0
+        )
+        laps = Lap.objects.all()
+        self.assertEqual(list(laps), [self.lap, lap2])
+
+
+class JSONUploadFormTests(TestCase):
+    """Test cases for the JSON upload form"""
+
+    def create_test_json_file(self, data=None):
+        """Helper to create a test JSON file"""
+        if data is None:
+            data = {
+                "track": "Test Track",
+                "players": [{"name": "Test Driver", "car": "Test Car"}],
+                "sessions": [{
+                    "laps": [{
+                        "lap": 1,
+                        "car": 0,
+                        "time": 90567,
+                        "sectors": [30123, 30234, 30210],
+                        "tyre": "M",
+                        "cuts": 0
+                    }]
+                }]
+            }
+        return SimpleUploadedFile(
+            "test.json",
+            json.dumps(data).encode('utf-8'),
+            content_type="application/json"
+        )
+
+    def test_valid_json_upload(self):
+        """Test valid JSON file upload"""
+        json_file = self.create_test_json_file()
+        form = JSONUploadForm(files={'json_file': json_file})
+        self.assertTrue(form.is_valid())
+
+    def test_invalid_file_extension(self):
+        """Test rejection of non-JSON files"""
+        txt_file = SimpleUploadedFile(
+            "test.txt",
+            b"not json content",
+            content_type="text/plain"
+        )
+        form = JSONUploadForm(files={'json_file': txt_file})
+        self.assertFalse(form.is_valid())
+        self.assertIn('File must have .json extension', form.errors['json_file'])
+
+    def test_invalid_json_content(self):
+        """Test rejection of invalid JSON content"""
+        invalid_file = SimpleUploadedFile(
+            "test.json",
+            b"invalid json content",
+            content_type="application/json"
+        )
+        form = JSONUploadForm(files={'json_file': invalid_file})
+        self.assertFalse(form.is_valid())
+        self.assertIn('Invalid JSON file format', form.errors['json_file'])
+
+    def test_missing_required_fields(self):
+        """Test rejection of JSON missing required fields"""
+        incomplete_data = {"track": "Test Track"}
+        json_file = self.create_test_json_file(incomplete_data)
+        form = JSONUploadForm(files={'json_file': json_file})
+        self.assertFalse(form.is_valid())
+
+    def test_invalid_players_structure(self):
+        """Test rejection of invalid players structure"""
+        invalid_data = {
+            "track": "Test Track",
+            "players": "not a list",
+            "sessions": [{"laps": []}]
+        }
+        json_file = self.create_test_json_file(invalid_data)
+        form = JSONUploadForm(files={'json_file': json_file})
+        self.assertFalse(form.is_valid())
+
+    def test_empty_sessions(self):
+        """Test rejection of empty sessions"""
+        invalid_data = {
+            "track": "Test Track",
+            "players": [{"name": "Test"}],
+            "sessions": []
+        }
+        json_file = self.create_test_json_file(invalid_data)
+        form = JSONUploadForm(files={'json_file': json_file})
+        self.assertFalse(form.is_valid())
+
+
+class SessionEditFormTests(TestCase):
+    """Test cases for the session edit form"""
+
+    def setUp(self):
+        self.session = Session.objects.create(
+            track="Original Track",
+            car="Original Car",
+            session_type="Practice",
+            file_name="test.json"
+        )
+
+    def test_form_initialization(self):
+        """Test form initializes with session data"""
+        form = SessionEditForm(instance=self.session)
+        self.assertEqual(form.fields['track_select'].initial, "Original Track")
+        self.assertEqual(form.fields['car_select'].initial, "Original Car")
+
+    def test_track_text_input(self):
+        """Test using text input for track"""
+        form_data = {
+            'track_select': '',
+            'track_text': 'New Track',
+            'car_select': 'Original Car',
+            'car_text': '',
+            'session_name': 'Test Session',
+            'upload_date': timezone.now().strftime('%Y-%m-%dT%H:%M')
+        }
+        form = SessionEditForm(data=form_data, instance=self.session)
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data['track'], 'New Track')
+
+    def test_car_text_input(self):
+        """Test using text input for car"""
+        form_data = {
+            'track_select': 'Original Track',
+            'track_text': '',
+            'car_select': '',
+            'car_text': 'New Car',
+            'session_name': 'Test Session',
+            'upload_date': timezone.now().strftime('%Y-%m-%dT%H:%M')
+        }
+        form = SessionEditForm(data=form_data, instance=self.session)
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data['car'], 'New Car')
+
+    def test_missing_track_and_car(self):
+        """Test form validation when both track fields are empty"""
+        form_data = {
+            'track_select': '',
+            'track_text': '',
+            'car_select': 'Original Car',
+            'car_text': '',
+            'session_name': 'Test Session',
+            'upload_date': timezone.now().strftime('%Y-%m-%dT%H:%M')
+        }
+        form = SessionEditForm(data=form_data, instance=self.session)
+        self.assertFalse(form.is_valid())
+        self.assertIn('track_select', form.errors)
+
+
+class HomeViewTests(TestCase):
+    """Test cases for the home view"""
+
+    def setUp(self):
+        self.client = Client()
+        self.url = reverse('home')
+
+    def test_home_view_get(self):
+        """Test GET request to home view"""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Upload Race Data')
+        self.assertIn('form', response.context)
+        self.assertIn('sessions', response.context)
+
+    def test_home_view_displays_sessions(self):
+        """Test that recent sessions are displayed"""
+        session = Session.objects.create(
+            track="Test Track",
+            car="Test Car",
+            session_type="Practice",
+            file_name="test.json"
+        )
+        response = self.client.get(self.url)
+        self.assertContains(response, "Test Track")
+        self.assertContains(response, "Test Car")
+
+    def create_test_json_file(self):
+        """Helper to create a valid test JSON file"""
+        data = {
+            "track": "Silverstone",
+            "players": [{"name": "Test Driver", "car": "Formula 1"}],
+            "sessions": [{
+                "type": 1,
+                "laps": [{
+                    "lap": 1,
+                    "car": 0,
+                    "time": 90567,
+                    "sectors": [30123, 30234, 30210],
+                    "tyre": "M",
+                    "cuts": 0
+                }]
+            }]
+        }
+        return SimpleUploadedFile(
+            "test.json",
+            json.dumps(data).encode('utf-8'),
+            content_type="application/json"
+        )
+
+    def test_successful_file_upload(self):
+        """Test successful JSON file upload creates session and lap"""
+        json_file = self.create_test_json_file()
+        response = self.client.post(self.url, {'json_file': json_file})
+        
+        self.assertEqual(response.status_code, 302)  # Redirect after success
+        
+        # Check that session was created
+        self.assertTrue(Session.objects.filter(track="Silverstone").exists())
+        session = Session.objects.get(track="Silverstone")
+        self.assertEqual(session.car, "Formula 1")
+        self.assertEqual(session.session_type, "Practice")
+        
+        # Check that lap was created
+        self.assertTrue(Lap.objects.filter(session=session).exists())
+        lap = Lap.objects.get(session=session)
+        self.assertEqual(lap.lap_number, 1)
+        self.assertEqual(lap.driver_name, "Test Driver")
+        self.assertEqual(lap.total_time, 90.567)  # Converted from milliseconds
+
+    def test_session_type_extraction_quick_drive(self):
+        """Test session type extraction from __quickDrive field"""
+        data = {
+            "track": "Test Track",
+            "__quickDrive": '{"Mode": "/Pages/Drive/QuickDrive_Trackday.xaml"}',
+            "players": [{"name": "Test Driver", "car": "Test Car"}],
+            "sessions": [{
+                "laps": [{
+                    "lap": 1,
+                    "car": 0,
+                    "time": 90567,
+                    "sectors": [],
+                    "tyre": "M",
+                    "cuts": 0
+                }]
+            }]
+        }
+        json_file = SimpleUploadedFile(
+            "test.json",
+            json.dumps(data).encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        self.client.post(self.url, {'json_file': json_file})
+        session = Session.objects.get(track="Test Track")
+        self.assertEqual(session.session_type, "Trackday")
+
+
+class SessionDetailViewTests(TestCase):
+    """Test cases for the session detail view"""
+
+    def setUp(self):
+        self.client = Client()
+        self.session = Session.objects.create(
+            track="Test Track",
+            car="Test Car",
+            session_type="Practice",
+            file_name="test.json"
+        )
+        self.lap1 = Lap.objects.create(
+            session=self.session,
+            lap_number=1,
+            driver_name="Driver 1",
+            car_index=0,
+            total_time=90.5,
+            sectors=[30.1, 30.2, 30.2]
+        )
+        self.lap2 = Lap.objects.create(
+            session=self.session,
+            lap_number=2,
+            driver_name="Driver 2",
+            car_index=1,
+            total_time=91.0,
+            sectors=[30.3, 30.4, 30.3]
+        )
+        self.url = reverse('session_detail', kwargs={'pk': self.session.pk})
+
+    def test_session_detail_view(self):
+        """Test session detail view displays correctly"""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Test Track")
+        self.assertContains(response, "Driver 1")
+        self.assertContains(response, "Driver 2")
+
+    def test_driver_filtering(self):
+        """Test filtering by driver"""
+        response = self.client.get(self.url, {'driver': 'Driver 1'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Driver 1")
+        # Should only show Driver 1's laps
+
+    def test_sorting_by_total_time(self):
+        """Test sorting by total time"""
+        response = self.client.get(self.url, {'sort': 'total_time'})
+        self.assertEqual(response.status_code, 200)
+        # Check that laps are sorted by total time
+
+    def test_context_data(self):
+        """Test that context contains all required data"""
+        response = self.client.get(self.url)
+        context = response.context
+        
+        self.assertIn('session', context)
+        self.assertIn('laps', context)
+        self.assertIn('drivers', context)
+        self.assertIn('chart_data', context)
+        self.assertIn('fastest_lap', context)
+        self.assertIn('sector_count', context)
+        
+        self.assertEqual(context['session'], self.session)
+        self.assertEqual(set(context['drivers']), {'Driver 1', 'Driver 2'})
+
+
+class SessionEditViewTests(TestCase):
+    """Test cases for the session edit view"""
+
+    def setUp(self):
+        self.client = Client()
+        self.session = Session.objects.create(
+            track="Original Track",
+            car="Original Car",
+            session_type="Practice",
+            file_name="test.json"
+        )
+        self.url = reverse('session_edit', kwargs={'pk': self.session.pk})
+
+    def test_session_edit_view_get(self):
+        """Test GET request to session edit view"""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Original Track")
+        self.assertContains(response, "Original Car")
+
+    def test_session_edit_view_post(self):
+        """Test POST request to update session"""
+        form_data = {
+            'track_select': '',
+            'track_text': 'Updated Track',
+            'car_select': '',
+            'car_text': 'Updated Car',
+            'session_name': 'Updated Session',
+            'upload_date': timezone.now().strftime('%Y-%m-%dT%H:%M')
+        }
+        response = self.client.post(self.url, form_data)
+        
+        # Should redirect to session detail after successful update
+        self.assertEqual(response.status_code, 302)
+        
+        # Check that session was updated
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.track, 'Updated Track')
+        self.assertEqual(self.session.car, 'Updated Car')
+        self.assertEqual(self.session.session_name, 'Updated Session')
+
+
+class SessionDeleteViewTests(TestCase):
+    """Test cases for the session delete view"""
+
+    def setUp(self):
+        self.client = Client()
+        self.session = Session.objects.create(
+            track="Test Track",
+            car="Test Car",
+            session_type="Practice",
+            file_name="test.json"
+        )
+        self.url = reverse('session_delete', kwargs={'pk': self.session.pk})
+
+    def test_session_delete_view_get(self):
+        """Test GET request to session delete confirmation"""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Confirm Session Deletion")
+        self.assertContains(response, self.session.track)
+
+    def test_session_delete_view_post(self):
+        """Test POST request to delete session"""
+        response = self.client.post(self.url)
+        
+        # Should redirect to home after deletion
+        self.assertEqual(response.status_code, 302)
+        
+        # Check that session was deleted
+        self.assertFalse(Session.objects.filter(pk=self.session.pk).exists())
+
+
+class SessionDataAPITests(TestCase):
+    """Test cases for the session data API endpoint"""
+
+    def setUp(self):
+        self.client = Client()
+        self.session = Session.objects.create(
+            track="Test Track",
+            car="Test Car",
+            session_type="Practice",
+            file_name="test.json"
+        )
+        self.lap = Lap.objects.create(
+            session=self.session,
+            lap_number=1,
+            driver_name="Test Driver",
+            car_index=0,
+            total_time=90.5,
+            sectors=[30.1, 30.2, 30.2],
+            tyre_compound="M",
+            cuts=0
+        )
+        self.url = reverse('session_api', kwargs={'pk': self.session.pk})
+
+    def test_session_data_api(self):
+        """Test session data API returns correct JSON"""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['content-type'], 'application/json')
+        
+        data = response.json()
+        self.assertIn('session', data)
+        self.assertIn('laps', data)
+        self.assertEqual(data['session']['track'], 'Test Track')
+        self.assertEqual(len(data['laps']), 1)
+
+
+class DriverDeletionTests(TestCase):
+    """Test cases for driver deletion functionality"""
+
+    def setUp(self):
+        self.client = Client()
+        self.session = Session.objects.create(
+            track="Test Track",
+            car="Test Car",
+            session_type="Practice",
+            file_name="test.json"
+        )
+        # Create multiple laps for the same driver
+        for i in range(3):
+            Lap.objects.create(
+                session=self.session,
+                lap_number=i + 1,
+                driver_name="Test Driver",
+                car_index=0,
+                total_time=90.0 + i
+            )
+        self.url = reverse('delete_driver', 
+                          kwargs={'session_pk': self.session.pk, 
+                                 'driver_name': 'Test Driver'})
+
+    def test_delete_driver_success(self):
+        """Test successful driver deletion"""
+        # Verify laps exist before deletion
+        self.assertEqual(
+            Lap.objects.filter(session=self.session, driver_name="Test Driver").count(), 
+            3
+        )
+        
+        response = self.client.post(self.url)
+        
+        # Should redirect back to session detail
+        self.assertEqual(response.status_code, 302)
+        
+        # Verify all laps for the driver were deleted
+        self.assertEqual(
+            Lap.objects.filter(session=self.session, driver_name="Test Driver").count(), 
+            0
+        )
+
+    def test_delete_nonexistent_driver(self):
+        """Test deletion of non-existent driver"""
+        url = reverse('delete_driver', 
+                     kwargs={'session_pk': self.session.pk, 
+                            'driver_name': 'Nonexistent Driver'})
+        
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 302)
+        
+        # Original laps should still exist
+        self.assertEqual(
+            Lap.objects.filter(session=self.session, driver_name="Test Driver").count(), 
+            3
+        )
+
+
+class IntegrationTests(TestCase):
+    """Integration tests for the complete workflow"""
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_complete_upload_and_view_workflow(self):
+        """Test complete workflow from upload to viewing session details"""
+        # Create test JSON data
+        data = {
+            "track": "Monza",
+            "players": [
+                {"name": "Driver A", "car": "Ferrari"},
+                {"name": "Driver B", "car": "Ferrari"}
+            ],
+            "sessions": [{
+                "type": 2,  # Qualifying
+                "laps": [
+                    {
+                        "lap": 1,
+                        "car": 0,
+                        "time": 85000,
+                        "sectors": [28000, 28500, 28500],
+                        "tyre": "S",
+                        "cuts": 0
+                    },
+                    {
+                        "lap": 1,
+                        "car": 1,
+                        "time": 86000,
+                        "sectors": [28200, 28600, 29200],
+                        "tyre": "S",
+                        "cuts": 1
+                    }
+                ]
+            }]
+        }
+        
+        json_file = SimpleUploadedFile(
+            "monza_quali.json",
+            json.dumps(data).encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        # Upload the file
+        upload_response = self.client.post(reverse('home'), {'json_file': json_file})
+        self.assertEqual(upload_response.status_code, 302)
+        
+        # Verify session was created
+        session = Session.objects.get(track="Monza")
+        self.assertEqual(session.session_type, "Qualifying")
+        self.assertEqual(session.car, "Ferrari")
+        
+        # Verify laps were created
+        laps = Lap.objects.filter(session=session)
+        self.assertEqual(laps.count(), 2)
+        
+        # Check lap data conversion
+        lap_a = laps.get(driver_name="Driver A")
+        self.assertEqual(lap_a.total_time, 85.0)  # Converted from ms
+        self.assertEqual(lap_a.sectors, [28.0, 28.5, 28.5])  # Converted from ms
+        
+        lap_b = laps.get(driver_name="Driver B")
+        self.assertEqual(lap_b.cuts, 1)
+        
+        # View session detail page
+        detail_response = self.client.get(
+            reverse('session_detail', kwargs={'pk': session.pk})
+        )
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, "Monza")
+        self.assertContains(detail_response, "Driver A")
+        self.assertContains(detail_response, "Driver B")
+        
+        # Test API endpoint
+        api_response = self.client.get(
+            reverse('session_api', kwargs={'pk': session.pk})
+        )
+        self.assertEqual(api_response.status_code, 200)
+        api_data = api_response.json()
+        self.assertEqual(api_data['session']['track'], "Monza")
+        self.assertEqual(len(api_data['laps']), 2)

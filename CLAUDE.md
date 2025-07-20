@@ -22,9 +22,54 @@ python manage.py migrate
 
 ### Testing
 ```bash
+# Run all tests (38 tests total)
 python manage.py test
+
+# Run with detailed output
+python manage.py test --verbosity=2
+
+# Run only laptimes app tests
+python manage.py test laptimes
+
+# Run specific test class
+python manage.py test laptimes.tests.SessionModelTests
+
+# Run specific test method
+python manage.py test laptimes.tests.SessionModelTests.test_session_creation
+
+# Keep test database for debugging
+python manage.py test --keepdb
+
+# Run tests in parallel (faster)
+python manage.py test --parallel
+
+# Stop on first failure
+python manage.py test --failfast
 ```
-Runs the Django test suite located in `laptimes/tests.py`
+
+#### Test Coverage (Optional)
+```bash
+# Install coverage tool
+pip install coverage
+
+# Run tests with coverage tracking
+coverage run --source='.' manage.py test
+
+# Generate coverage report
+coverage report
+
+# Generate HTML coverage report
+coverage html
+```
+
+**Test Suite Coverage:**
+- 38 comprehensive tests covering models, views, forms, and integration
+- Model tests: Session and Lap creation, validation, methods
+- View tests: All major views including upload, detail, edit, delete
+- Form tests: JSON upload validation and session editing
+- Integration tests: Complete workflow from upload to viewing
+- API tests: JSON endpoint functionality
+- Driver management: Deletion and filtering features
 
 ### Admin Access
 - URL: http://127.0.0.1:8000/admin/

@@ -331,8 +331,7 @@ def session_data_api(_request, pk):
                 'lap': lap.lap_number,
                 'driver': lap.driver_name,
                 'total_time': lap.total_time,
-                'sectors': [lap.sector1_time, lap.sector2_time,
-                            lap.sector3_time],
+                'sectors': lap.get_sector_times(),
                 'tyre': lap.tyre_compound,
                 'cuts': lap.cuts
             }
