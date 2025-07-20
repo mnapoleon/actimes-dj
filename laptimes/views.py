@@ -85,18 +85,9 @@ class HomeView(FormView):
             if data['players'] and len(data['players']) > 0:
                 car_model = data['players'][0].get('car', 'Unknown')
 
-            # Try to extract dtv from __quickDrive
-            upload_date = None
-            if '__quickDrive' in data:
-                try:
-                    quick_drive = json.loads(data['__quickDrive']) if isinstance(data['__quickDrive'], str) else data['__quickDrive']
-                    dtv = quick_drive.get('dtv')
-                    if dtv:
-                        # Remove timezone if present, Django expects +HH:MM or Z
-                        # parse_datetime handles ISO8601 with offset
-                        upload_date = parse_datetime(dtv)
-                except Exception:
-                    pass
+            # Use the file upload time as the default upload_date
+            from django.utils import timezone
+            upload_date = timezone.now()
 
             # Create Session object
             session = Session.objects.create(
@@ -105,7 +96,7 @@ class HomeView(FormView):
                 session_type=session_type,
                 file_name=json_file.name,
                 players_data=data['players'],
-                upload_date=upload_date if upload_date else None
+                upload_date=upload_date
             )
 
             # Create Lap objects from session laps

@@ -39,7 +39,7 @@ class SessionEditForm(forms.ModelForm):
 
     class Meta:
         model = Session
-        fields = ['session_name', 'track', 'car']
+        fields = ['session_name', 'track', 'car', 'upload_date']
         widgets = {
             'session_name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -49,16 +49,22 @@ class SessionEditForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Car model'
             }),
+            'upload_date': forms.DateTimeInput(attrs={
+                'class': 'form-control',
+                'type': 'datetime-local',
+            }, format='%Y-%m-%dT%H:%M'),
         }
         labels = {
             'session_name': 'Session Name',
             'track': 'Track',
             'car': 'Car',
+            'upload_date': 'Upload Date',
         }
         help_texts = {
             'session_name': 'Optional custom name for this session',
             'track': 'The track where this session took place',
             'car': 'The car model used in this session',
+            'upload_date': 'Date and time the session was uploaded',
         }
 
     def __init__(self, *args, **kwargs):
@@ -79,6 +85,9 @@ class SessionEditForm(forms.ModelForm):
                 self.fields['car_select'].initial = self.instance.car
                 self.fields['car_text'].initial = ''
                 self.fields['car'].initial = self.instance.car
+            if self.instance.upload_date:
+                # Format for datetime-local input
+                self.fields['upload_date'].initial = self.instance.upload_date.strftime('%Y-%m-%dT%H:%M')
 
     def clean(self):
         cleaned_data = super().clean()
