@@ -20,11 +20,11 @@
   <body>
     <div class="container-fluid">
       <header class="text-center py-4 mb-4">
-        <h1 class="text-primary fw-bold">
-          <a href="{% url 'home' %}" class="text-decoration-none">
-            Assetto Corsa Lap Times
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-3">
+          <a href="{% url 'home' %}" class="d-block" style="height:64px;">
+            <img src="{% static 'imgs/assetto_corsa_logo.svg' %}" alt="Assetto Corsa Logo" style="height:64px; width:auto;" loading="lazy" />
           </a>
-        </h1>
+        </div>
       </header>
 
       <!-- Messages -->
