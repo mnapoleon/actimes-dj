@@ -3,14 +3,10 @@
 :root {
   --primary-color: #2563eb;
   --purple-color: #8b5cf6;
-  --background-color: #f8fafc;
-  --card-background: #ffffff;
+  --background-color: #ffffff;
+  --card-background: #21211F;
   --text-color: #1e293b;
   --border-color: #e2e8f0;
-}
-  background-color: #2a2a28 !important;
-  color: #fff !important;
-  border-color: var(--primary-color) !important;
 }
 
 /* Custom purple badge for fastest sectors */
@@ -48,10 +44,11 @@
 }
 
 /* Table header styling */
-.table-primary th {
-  background-color: var(--primary-color) !important;
+.table-primary th,
+.table thead th {
+  background-color: #DB0E15 !important;
   color: white !important;
-  border-color: var(--primary-color) !important;
+  border-color: #DB0E15 !important;
 }
 
 /* Rounded corners for all elements */
@@ -73,6 +70,11 @@
 }
 
 /* Round the table corners properly */
+.table {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
 .table thead th:first-child {
   border-top-left-radius: 12px !important;
 }
@@ -91,11 +93,11 @@
 
 /* Navigation styling */
 header h1 a {
-  color: var(--primary-color) !important;
+  color: #DB0E15 !important;
 }
 
 header h1 a:hover {
-  color: #1d4ed8 !important;
+  color: #b30b11 !important;
 }
 
 /* List group styling */
@@ -111,9 +113,37 @@ header h1 a:hover {
 
 /* Breadcrumb styling */
 .breadcrumb {
-  background-color: var(--background-color);
-  border-radius: 8px;
-  padding: 10px 15px;
+  background-color: var(--card-background) !important;
+  border-radius: 12px !important;
+  padding: 12px 20px !important;
+  border: 1px solid var(--border-color) !important;
+  margin-bottom: 20px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.breadcrumb-item {
+  color: #DB0E15 !important;
+}
+
+.breadcrumb-item a {
+  color: #DB0E15 !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+}
+
+.breadcrumb-item a:hover {
+  color: #b30b11 !important;
+  text-decoration: underline !important;
+}
+
+.breadcrumb-item.active {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+  color: #DB0E15 !important;
+  font-weight: bold !important;
 }
 
 /* Custom alert styling */
@@ -144,6 +174,74 @@ header h1 a:hover {
 .pagination .page-item.active .page-link {
   background-color: var(--primary-color);
   border-color: var(--primary-color);
+}
+
+/* Body background */
+body {
+  background-color: var(--background-color) !important;
+}
+
+/* Card and table backgrounds */
+.card {
+  background-color: var(--card-background) !important;
+  color: #ffffff !important;
+}
+
+.table {
+  background-color: #ffffff !important;
+  color: var(--text-color) !important;
+}
+
+.table td,
+.table th {
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+/* Session section text in red */
+.card h1,
+.card h2,
+.card h3,
+.card h4,
+.card h5,
+.card h6 {
+  color: #DB0E15 !important;
+}
+
+/* Driver name in grid - make it black */
+.table .text-primary {
+  color: #000000 !important;
+}
+
+/* Lap badge - make it black */
+.table .badge.bg-primary {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Edit Session button - make it red */
+.btn-outline-primary {
+  color: #DB0E15 !important;
+  border-color: #DB0E15 !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: #DB0E15 !important;
+  border-color: #DB0E15 !important;
+  color: #ffffff !important;
+}
+
+/* Upload Session button - make it red */
+.btn-primary {
+  background-color: #DB0E15 !important;
+  border-color: #DB0E15 !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:hover {
+  background-color: #b30b11 !important;
+  border-color: #b30b11 !important;
+  color: #ffffff !important;
 }
 
 /* Responsive improvements */
