@@ -1,0 +1,101 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+.eggs/
+*.egg
+
+# Django
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.sqlite
+*.bak
+*.tmp
+*.swp
+*.swo
+*.~
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Virtualenv
+.venv/
+venv/
+ENV/
+env/
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Migrations
+*/migrations/__pycache__/
+*/migrations/*.pyc
+*/migrations/*.pyo
+*/migrations/*.pyd
+
+# Static files
+staticfiles/
+static/
+
+# Media files
+media/
+
+# Test output
+junit-*.xml
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# Pytest
+.pytest_cache/
+
+# Sentry
+.sentryclirc
+
+# dotenv
+.env
+.env.*
+
+# Local settings
+local_settings.py
+settings_local.py
+
+# Node
+node_modules/
+
+# Other
+*.orig
+*.rej
+*.sublime-workspace
+*.sublime-project
+*.idea/
+*.iml
+*.bak
+*.tmp
+*.swp
+*.swo
+*.~

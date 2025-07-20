@@ -1,0 +1,130 @@
+{% extends 'laptimes/base.html' %}
+
+{% block title %}Edit Session | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'session_detail' session.pk %}">{{ session }}</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title mb-0">
+                    <i class="bi bi-pencil-square me-2"></i>Edit Session Information
+                </h2>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.session_name.id_for_label }}" class="form-label">
+                            {{ form.session_name.label }}
+                        </label>
+                        {{ form.session_name }}
+                        {% if form.session_name.help_text %}
+                            <div class="form-text">{{ form.session_name.help_text }}</div>
+                        {% endif %}
+                        {% if form.session_name.errors %}
+                            <div class="text-danger">
+                                {% for error in form.session_name.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Track</label>
+                        {{ form.track_select }}
+                        <div class="form-text">Choose a track from previous sessions, or enter a new one below.</div>
+                        {% if form.track_select.errors %}
+                            <div class="text-danger">
+                                {% for error in form.track_select.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="my-2 text-center text-muted">— or —</div>
+                        {{ form.track_text }}
+                        {% if form.track_text.errors %}
+                            <div class="text-danger">
+                                {% for error in form.track_text.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Car</label>
+                        {{ form.car_select }}
+                        <div class="form-text">Choose a car from previous sessions, or enter a new one below.</div>
+                        {% if form.car_select.errors %}
+                            <div class="text-danger">
+                                {% for error in form.car_select.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="my-2 text-center text-muted">— or —</div>
+                        {{ form.car_text }}
+                        {% if form.car_text.errors %}
+                            <div class="text-danger">
+                                {% for error in form.car_text.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {{ form.car }}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Save Changes
+                        </button>
+                        <a href="{% url 'session_detail' session.pk %}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg me-1"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+                {% block extra_js %}
+                <script>
+                  // Optional: auto-clear text input if dropdown is changed
+                  const trackSelect = document.getElementById('{{ form.track_select.id_for_label }}');
+                  const trackText = document.getElementById('{{ form.track_text.id_for_label }}');
+                  if (trackSelect && trackText) {
+                    trackSelect.addEventListener('change', function() {
+                      if (this.value) trackText.value = '';
+                    });
+                    trackText.addEventListener('input', function() {
+                      if (this.value) trackSelect.value = '';
+                    });
+                  }
+                  const carSelect = document.getElementById('{{ form.car_select.id_for_label }}');
+                  const carText = document.getElementById('{{ form.car_text.id_for_label }}');
+                  if (carSelect && carText) {
+                    carSelect.addEventListener('change', function() {
+                      if (this.value) carText.value = '';
+                    });
+                    carText.addEventListener('input', function() {
+                      if (this.value) carSelect.value = '';
+                    });
+                  }
+                </script>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends 'laptimes/base.html' %}
+
+{% block content %}
+<h2 class="mb-3">Recent Sessions</h2>
+{% if sessions %}
+  <div class="table-responsive mb-4">
+    <table class="table table-striped align-middle">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Track</th>
+          <th>Car</th>
+          <th>Fastest Lap</th>
+          <th>Driver</th>
+          <th>Laps</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for session in sessions %}
+          {% with fastest=session.get_fastest_lap %}
+          <tr>
+            <td>
+              <a href="{% url 'session_detail' session.pk %}" class="fw-semibold text-decoration-none">
+                {% if session.session_name %}{{ session.session_name }}{% else %}{{ session.track }}{% endif %}
+              </a>
+            </td>
+            <td>{{ session.track }}</td>
+            <td>{{ session.car }}</td>
+            <td>
+              {% if fastest %}
+                <span class="text-success"><i class="bi bi-stopwatch"></i> {{ fastest.format_time }}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if fastest %}
+                {{ fastest.driver_name }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>{{ session.laps.count }}</td>
+            <td class="text-end">
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'session_detail' session.pk %}" class="btn btn-outline-primary btn-sm" title="View">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{% url 'session_edit' session.pk %}" class="btn btn-outline-secondary btn-sm" title="Edit">
+                  <i class="bi bi-pencil-square"></i>
+                </a>
+                <a href="{% url 'session_delete' session.pk %}" class="btn btn-outline-danger btn-sm" title="Delete">
+                  <i class="bi bi-trash3"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="text-muted">No sessions uploaded yet.</p>
+{% endif %}
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="card-title">Upload Race Data</h2>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="mb-3">
+            {{ form.json_file.label_tag }} 
+            {{ form.json_file }}
+            {% if form.json_file.help_text %}
+              <div class="form-text">{{ form.json_file.help_text }}</div>
+            {% endif %}
+            {% if form.json_file.errors %}
+              <div class="text-danger">
+                {% for error in form.json_file.errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-upload"></i> Upload Session
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

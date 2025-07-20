@@ -1,0 +1,211 @@
+{% extends 'laptimes/base.html' %}
+{% load laptimes_extras %}
+
+{% block title %}{{ session.track }} - {{ session.car }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                <li class="breadcrumb-item active">{{ session }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="card-title mb-0">Session Information</h2>
+            <a href="{% url 'session_edit' session.pk %}" class="btn btn-sm btn-outline-primary">Edit Session</a>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <dl class="row">
+                    <dt class="col-sm-4">Track:</dt>
+                    <dd class="col-sm-8">{{ session.track }}</dd>
+                    <dt class="col-sm-4">Car:</dt>
+                    <dd class="col-sm-8">{{ session.car }}</dd>
+                    <dt class="col-sm-4">Session:</dt>
+                    <dd class="col-sm-8">{{ session.session_type }}</dd>
+                </dl>
+            </div>
+            <div class="col-md-6">
+                <dl class="row">
+                    <dt class="col-sm-4">Uploaded:</dt>
+                    <dd class="col-sm-8">{{ session.upload_date|date:"M d, Y H:i" }}</dd>
+                    <dt class="col-sm-4">Total Laps:</dt>
+                    <dd class="col-sm-8">{{ laps|length }}</dd>
+                    {% if fastest_lap %}
+                    <dt class="col-sm-4">Fastest Lap:</dt>
+                    <dd class="col-sm-8">{{ fastest_lap.format_time }} by {{ fastest_lap.driver_name }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="card-title mb-0">Lap Times</h2>
+            <div class="d-flex gap-2">
+                <!-- Driver Filter -->
+                <select class="form-select form-select-sm" id="driverFilter" style="width: auto;">
+                    <option value="all">All Drivers</option>
+                    {% for driver in drivers %}
+                        <option value="{{ driver }}">{{ driver }}</option>
+                    {% endfor %}
+                </select>
+                
+                <!-- Sort Options -->
+                <select class="form-select form-select-sm" id="sortBy" style="width: auto;">
+                    <option value="driver_name" selected>Driver</option>
+                    <option value="lap_number">Lap Number</option>
+                    <option value="total_time">Total Time</option>
+                    {% for i in ""|center:sector_count %}
+                        <option value="sector{{ forloop.counter }}_time">Sector {{ forloop.counter }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Lap</th>
+                        <th>Driver</th>
+                        <th>Total Time</th>
+                        {% for i in ""|center:sector_count %}
+                            <th>Sector {{ forloop.counter }}</th>
+                        {% endfor %}
+                        <th>Tyre</th>
+                        <th>Cuts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lap in laps %}
+                    <tr {% if lap.total_time == fastest_total %}class="table-purple"{% elif lap.is_pb_total %}class="table-personal-best"{% elif lap.total_time == slowest_total %}class="table-danger"{% endif %}>
+                        <td>
+                            <span class="badge bg-primary">{{ lap.lap_number }}</span>
+                        </td>
+                        <td>
+                            <span class="fw-bold text-primary">{{ lap.driver_name }}</span>
+                        </td>
+                        <td>
+                            <span class="fw-semibold">{{ lap.format_time }}</span>
+                        </td>
+{% for s in lap.sectors %}
+    <td>
+        {% with idx=forloop.counter0 %}
+            {% with highlight=lap.sector_highlights|index:idx %}
+                {% if highlight %}
+                    {% if s|floatformat:3 == highlight.fastest|floatformat:3 %}
+                        <span class="badge bg-purple">{{ s|floatformat:3 }}s</span>
+                    {% elif s|floatformat:3 == highlight.pb|floatformat:3 %}
+                        <span class="badge bg-personal-best">{{ s|floatformat:3 }}s</span>
+                    {% elif s|floatformat:3 == highlight.slowest|floatformat:3 %}
+                        <span class="badge bg-danger">{{ s|floatformat:3 }}s</span>
+                    {% else %}
+                        <span>{{ s|floatformat:3 }}s</span>
+                    {% endif %}
+                {% else %}
+                    <span>{{ s|floatformat:3 }}s</span>
+                {% endif %}
+            {% endwith %}
+        {% endwith %}
+    </td>
+{% endfor %}
+                        {% for i in ""|center:sector_count|slice:":0" %}{% endfor %}
+                        <td>
+                            <span class="badge bg-info text-dark">{{ lap.tyre_compound }}</span>
+                        </td>
+                        <td>
+                            {% if lap.cuts > 0 %}
+                                <span class="text-danger fw-bold">{{ lap.cuts }}</span>
+                            {% else %}
+                                <span>{{ lap.cuts }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">No laps found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if is_paginated %}
+            <nav aria-label="Lap pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter and sort functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const driverFilter = document.getElementById('driverFilter');
+    const sortBy = document.getElementById('sortBy');
+    
+    function updateURL() {
+        const url = new URL(window.location);
+        const driver = driverFilter.value;
+        const sort = sortBy.value;
+        
+        if (driver === 'all') {
+            url.searchParams.delete('driver');
+        } else {
+            url.searchParams.set('driver', driver);
+        }
+        
+        url.searchParams.set('sort', sort);
+        window.location = url;
+    }
+    
+    driverFilter.addEventListener('change', updateURL);
+    sortBy.addEventListener('change', updateURL);
+    
+    // Set current values from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentDriver = urlParams.get('driver') || 'all';
+    const currentSort = urlParams.get('sort') || 'lap_number';
+    
+    driverFilter.value = currentDriver;
+    sortBy.value = currentSort;
+});
+</script>
+{% endblock %}
