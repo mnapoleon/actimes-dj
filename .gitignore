@@ -56,10 +56,6 @@ coverage.xml
 */migrations/*.pyo
 */migrations/*.pyd
 
-# Static files
-staticfiles/
-static/
-
 # Media files
 media/
 

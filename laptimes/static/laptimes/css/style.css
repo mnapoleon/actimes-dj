@@ -1,0 +1,166 @@
+
+/* Default color scheme */
+:root {
+  --primary-color: #2563eb;
+  --purple-color: #8b5cf6;
+  --background-color: #f8fafc;
+  --card-background: #ffffff;
+  --text-color: #1e293b;
+  --border-color: #e2e8f0;
+}
+  background-color: #2a2a28 !important;
+  color: #fff !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Custom purple badge for fastest sectors */
+.badge.bg-purple {
+  background-color: var(--purple-color) !important;
+  color: white !important;
+}
+
+/* Custom green badge for personal bests */
+.badge.bg-personal-best {
+  background-color: #16a34a !important;
+  color: white !important;
+}
+
+/* Custom purple table row for fastest lap - much lighter than badge */
+.table-purple {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  color: inherit !important;
+}
+
+.table-purple td {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  color: inherit !important;
+}
+
+/* Custom green table row for personal best lap */
+.table-personal-best {
+  background-color: rgba(22, 163, 74, 0.15) !important;
+  color: inherit !important;
+}
+
+.table-personal-best td {
+  background-color: rgba(22, 163, 74, 0.15) !important;
+  color: inherit !important;
+}
+
+/* Table header styling */
+.table-primary th {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Rounded corners for all elements */
+.card,
+.btn,
+.form-control,
+.form-select,
+.table,
+.alert,
+.badge {
+  border-radius: 12px !important;
+}
+
+/* Specific rounded corners for smaller elements */
+.btn-sm,
+.form-select-sm,
+.badge {
+  border-radius: 8px !important;
+}
+
+/* Round the table corners properly */
+.table thead th:first-child {
+  border-top-left-radius: 12px !important;
+}
+
+.table thead th:last-child {
+  border-top-right-radius: 12px !important;
+}
+
+.table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 12px !important;
+}
+
+.table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 12px !important;
+}
+
+/* Navigation styling */
+header h1 a {
+  color: var(--primary-color) !important;
+}
+
+header h1 a:hover {
+  color: #1d4ed8 !important;
+}
+
+/* List group styling */
+.list-group-item {
+  border-radius: 8px !important;
+  margin-bottom: 5px !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.list-group-item:hover {
+  background-color: var(--background-color) !important;
+}
+
+/* Breadcrumb styling */
+.breadcrumb {
+  background-color: var(--background-color);
+  border-radius: 8px;
+  padding: 10px 15px;
+}
+
+/* Custom alert styling */
+.alert {
+  border-radius: 8px !important;
+}
+
+/* Form styling improvements */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+}
+
+/* Pagination styling */
+.pagination .page-link {
+  color: var(--primary-color);
+  border-radius: 6px;
+  margin: 0 2px;
+  border: 1px solid var(--border-color);
+}
+
+.pagination .page-link:hover {
+  background-color: var(--background-color);
+  border-color: var(--primary-color);
+}
+
+.pagination .page-item.active .page-link {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .container-fluid {
+    padding: 10px;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+  }
+
+  .table-responsive {
+    font-size: 0.9rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+}
