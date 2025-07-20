@@ -213,6 +213,11 @@ body {
   color: #000000 !important;
 }
 
+/* Chart styling */
+#lapTimesChart {
+  background-color: #ffffff !important;
+}
+
 /* Lap badge - make it black */
 .table .badge.bg-primary {
   background-color: #000000 !important;

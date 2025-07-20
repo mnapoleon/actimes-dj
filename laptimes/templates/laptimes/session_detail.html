@@ -48,6 +48,15 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="card-title mb-3">Lap Times Chart</h2>
+        <div style="position: relative; height: 400px;">
+            <canvas id="lapTimesChart"></canvas>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -91,7 +100,7 @@
                     {% for lap in laps %}
                     <tr {% if lap.total_time == fastest_total %}class="table-purple"{% elif lap.is_pb_total %}class="table-personal-best"{% elif lap.total_time == slowest_total %}class="table-danger"{% endif %}>
                         <td>
-                            <span class="badge bg-primary">{{ lap.lap_number }}</span>
+                            <span class="badge bg-primary">{{ lap.lap_number|add:1 }}</span>
                         </td>
                         <td>
                             <span class="fw-bold text-primary">{{ lap.driver_name }}</span>
@@ -176,6 +185,90 @@
 
 {% block extra_js %}
 <script>
+// Lap times chart
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('lapTimesChart').getContext('2d');
+    
+    // Prepare data for chart (excluding lap 0)
+    const chartData = {
+        labels: [{% for lap_number in unique_lap_numbers %}{{ lap_number }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+        datasets: [
+            {% for driver in drivers %}
+            {
+                label: '{{ driver }}',
+                data: [
+                    {% for lap_number in unique_lap_numbers %}
+                        {% if chart_data|get_item:driver|get_item:lap_number %}
+                            {{ chart_data|get_item:driver|get_item:lap_number|floatformat:3 }}
+                        {% else %}
+                            null
+                        {% endif %}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: '{{ forloop.counter0|driver_color }}',
+                backgroundColor: '{{ forloop.counter0|driver_color }}',
+                tension: 0.1,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    };
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Lap Times Progression',
+                    color: '#DB0E15',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                },
+                legend: {
+                    labels: {
+                        color: '#000000'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Lap Number',
+                        color: '#000000'
+                    },
+                    ticks: {
+                        color: '#000000'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Lap Time (seconds)',
+                        color: '#000000'
+                    },
+                    ticks: {
+                        color: '#000000'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+});
+
 // Filter and sort functionality
 document.addEventListener('DOMContentLoaded', function() {
     const driverFilter = document.getElementById('driverFilter');

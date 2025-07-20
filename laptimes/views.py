@@ -172,14 +172,34 @@ class SessionDetailView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['session'] = self.session
+        
+        # Get all laps for the session (for chart)
+        all_laps = self.session.laps.all().order_by('lap_number')
+        context['all_laps'] = all_laps
+        
         # Get unique drivers from the session
         context['drivers'] = list(self.session.laps.values_list(
             'driver_name', flat=True
         ).distinct().order_by('driver_name'))
+        
+        # Get unique lap numbers for chart labels (excluding lap 0)
+        unique_lap_numbers = list(all_laps.filter(lap_number__gt=0).values_list('lap_number', flat=True).distinct().order_by('lap_number'))
+        context['unique_lap_numbers'] = unique_lap_numbers
+        
+        # Prepare chart data for each driver
+        chart_data = {}
+        for driver in context['drivers']:
+            chart_data[driver] = {}
+            for lap_number in unique_lap_numbers:
+                try:
+                    lap = all_laps.get(driver_name=driver, lap_number=lap_number)
+                    chart_data[driver][lap_number] = lap.total_time
+                except Lap.DoesNotExist:
+                    chart_data[driver][lap_number] = None
+        context['chart_data'] = chart_data
         context['fastest_lap'] = self.session.get_fastest_lap()
 
         # Determine the maximum number of sectors in any lap for this session
-        all_laps = self.session.laps.all()
         max_sectors = 0
         for lap in all_laps:
             if hasattr(lap, 'sectors') and lap.sectors:
