@@ -79,7 +79,7 @@ coverage html
 ### Environment Setup
 - Python 3.13 required
 - Python virtual environment is in `.venv/`
-- Dependencies are managed via `requirements.txt` (Django 4.2+)
+- Dependencies are managed via `requirements.txt` (Django 5.2+)
 - Database is SQLite (`db.sqlite3`)
 
 ## Architecture Overview
