@@ -904,3 +904,207 @@ class DuplicateFileTests(TestCase):
         error_message = form.errors['json_file'][0]
         self.assertIn('already been uploaded', error_message)
         self.assertIn('Existing session', error_message)
+
+    def test_enhanced_error_message_with_link(self):
+        """Test that error message includes clickable link to existing session"""
+        from .forms import JSONUploadForm
+        
+        json_content = json.dumps(self.valid_json_data)
+        
+        # Create a session first
+        uploaded_file1 = SimpleUploadedFile(
+            "test.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        # Upload first time through view to create session
+        self.client.post(reverse('home'), {'json_file': uploaded_file1})
+        session = Session.objects.first()
+        
+        # Now test form validation with enhanced error message
+        uploaded_file2 = SimpleUploadedFile(
+            "test_duplicate.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        form = JSONUploadForm(files={'json_file': uploaded_file2})
+        self.assertFalse(form.is_valid())
+        
+        error_message = str(form.errors['json_file'][0])
+        self.assertIn('already been uploaded', error_message)
+        self.assertIn(f'/session/{session.pk}/', error_message)  # Check for URL
+        self.assertIn('target="_blank"', error_message)  # Check for new tab
+        self.assertIn('Click the link to view', error_message)
+
+    def test_error_message_formatting(self):
+        """Test that error message has proper date/time formatting"""
+        from .forms import JSONUploadForm
+        
+        json_content = json.dumps(self.valid_json_data)
+        
+        # Create a session first
+        uploaded_file1 = SimpleUploadedFile(
+            "test.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        self.client.post(reverse('home'), {'json_file': uploaded_file1})
+        session = Session.objects.first()
+        
+        # Test form validation error message formatting
+        uploaded_file2 = SimpleUploadedFile(
+            "test_duplicate.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        form = JSONUploadForm(files={'json_file': uploaded_file2})
+        self.assertFalse(form.is_valid())
+        
+        error_message = str(form.errors['json_file'][0])
+        # Check for enhanced date format "YYYY-MM-DD at HH:MM"
+        expected_date_format = session.upload_date.strftime("%Y-%m-%d at %H:%M")
+        self.assertIn(expected_date_format, error_message)
+
+    def test_duplicate_error_display_in_template(self):
+        """Test that duplicate errors are displayed in enhanced red container"""
+        json_content = json.dumps(self.valid_json_data)
+        
+        # Upload first time
+        uploaded_file1 = SimpleUploadedFile(
+            "test.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        response1 = self.client.post(reverse('home'), {
+            'json_file': uploaded_file1
+        })
+        self.assertEqual(response1.status_code, 302)  # Success
+
+        # Try to upload same content again
+        uploaded_file2 = SimpleUploadedFile(
+            "test_duplicate.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        response2 = self.client.post(reverse('home'), {
+            'json_file': uploaded_file2
+        })
+        
+        # Check that the enhanced error container appears
+        self.assertEqual(response2.status_code, 200)
+        self.assertContains(response2, 'alert alert-danger')
+        self.assertContains(response2, 'Duplicate File Detected')
+        self.assertContains(response2, 'bi-exclamation-triangle-fill')
+        self.assertContains(response2, 'border-start border-danger border-4')
+        self.assertContains(response2, 'already been uploaded')
+
+    def test_standard_error_display_for_non_duplicate_errors(self):
+        """Test that non-duplicate errors still use standard display"""
+        # Upload a file with invalid JSON structure to trigger different error
+        invalid_json = '{"invalid": "structure"}'  # Missing required fields
+        
+        uploaded_file = SimpleUploadedFile(
+            "invalid.json",
+            invalid_json.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        response = self.client.post(reverse('home'), {
+            'json_file': uploaded_file
+        })
+        
+        # Should show standard error display, not the enhanced duplicate container
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Duplicate File Detected')
+        self.assertNotContains(response, 'alert alert-danger')
+        self.assertContains(response, 'text-danger')  # Standard error styling
+        self.assertContains(response, 'bi-exclamation-circle')  # Standard error icon
+
+
+class AdminInterfaceTests(TestCase):
+    """Test cases for admin interface enhancements"""
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.admin_user = User.objects.create_superuser(
+            username='admin',
+            email='admin@test.com',
+            password='testpass123'
+        )
+        self.client.login(username='admin', password='testpass123')
+        
+        # Create test session with hash
+        self.session_with_hash = Session.objects.create(
+            track="Test Track",
+            car="Test Car",
+            session_type="Practice",
+            file_name="test.json",
+            players_data=[{"name": "Test Driver"}],
+            file_hash="a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890"
+        )
+        
+        # Create test session without hash (legacy)
+        self.session_without_hash = Session.objects.create(
+            track="Legacy Track",
+            car="Legacy Car",
+            session_type="Race",
+            file_name="legacy.json",
+            players_data=[{"name": "Legacy Driver"}],
+            file_hash=None
+        )
+
+    def test_admin_list_display_includes_hash(self):
+        """Test that admin list view shows shortened file hash"""
+        response = self.client.get('/admin/laptimes/session/')
+        self.assertEqual(response.status_code, 200)
+        
+        # Check that shortened hash is displayed
+        self.assertContains(response, "a1b2c3d4...")
+        self.assertContains(response, "No hash")  # For legacy session
+
+    def test_admin_session_detail_shows_full_hash(self):
+        """Test that admin detail view shows full file hash"""
+        response = self.client.get(f'/admin/laptimes/session/{self.session_with_hash.pk}/change/')
+        self.assertEqual(response.status_code, 200)
+        
+        # Check for full hash display
+        self.assertContains(response, self.session_with_hash.file_hash)
+        self.assertContains(response, "Click to copy")
+
+    def test_admin_legacy_session_hash_message(self):
+        """Test that legacy sessions show appropriate hash message"""
+        response = self.client.get(f'/admin/laptimes/session/{self.session_without_hash.pk}/change/')
+        self.assertEqual(response.status_code, 200)
+        
+        self.assertContains(response, "No hash available")
+        self.assertContains(response, "uploaded before duplicate prevention")
+
+    def test_admin_search_includes_hash(self):
+        """Test that admin search functionality includes file hash"""
+        # Search by partial hash
+        search_term = "a1b2c3d4"
+        response = self.client.get(f'/admin/laptimes/session/?q={search_term}')
+        self.assertEqual(response.status_code, 200)
+        
+        # Should find the session with matching hash
+        self.assertContains(response, "Test Track")
+        # Note: Legacy track might still appear in filter options, so we check for specific context
+
+    def test_admin_fieldsets_organization(self):
+        """Test that admin form is properly organized with fieldsets"""
+        response = self.client.get(f'/admin/laptimes/session/{self.session_with_hash.pk}/change/')
+        self.assertEqual(response.status_code, 200)
+        
+        # Check for proper fieldset organization
+        self.assertContains(response, "Session Information")
+        self.assertContains(response, "File Information")
+        self.assertContains(response, "Player Data")
+        
+        # Player data should be collapsible (check for collapse class in any form)
+        self.assertIn('collapse', response.content.decode())

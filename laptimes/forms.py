@@ -1,5 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.urls import reverse
+from django.utils.html import format_html
 import json
 import hashlib
 
@@ -195,11 +197,18 @@ class JSONUploadForm(forms.Form):
             # Check for duplicate hash
             if Session.objects.filter(file_hash=file_hash).exists():
                 existing_session = Session.objects.get(file_hash=file_hash)
-                raise ValidationError(
-                    f'This file has already been uploaded. '
-                    f'Existing session: "{existing_session}" '
-                    f'(uploaded on {existing_session.upload_date.strftime("%Y-%m-%d %H:%M")})'
+                session_url = reverse('session_detail', kwargs={'pk': existing_session.pk})
+                
+                error_message = format_html(
+                    'This file has already been uploaded. '
+                    'Existing session: <a href="{}" target="_blank">"{}"</a> '
+                    '(uploaded on {}). '
+                    'Click the link to view the existing session or upload a different file.',
+                    session_url,
+                    existing_session,
+                    existing_session.upload_date.strftime("%Y-%m-%d at %H:%M")
                 )
+                raise ValidationError(error_message)
             
             # Store hash for later use in the view
             file._file_hash = file_hash
