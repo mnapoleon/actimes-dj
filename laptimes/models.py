@@ -4,6 +4,7 @@ from django.utils import timezone
 
 class Session(models.Model):
     """Model representing a racing session"""
+
     session_name = models.CharField(max_length=200, blank=True)
     track = models.CharField(max_length=200)
     car = models.CharField(max_length=200)
@@ -15,9 +16,9 @@ class Session(models.Model):
     file_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
 
     class Meta:
-        ordering = ['-upload_date']
+        ordering = ["-upload_date"]
         indexes = [
-            models.Index(fields=['file_hash']),
+            models.Index(fields=["file_hash"]),
         ]
 
     def __str__(self):
@@ -27,18 +28,17 @@ class Session(models.Model):
 
     def get_fastest_lap(self):
         """Get the fastest lap in this session"""
-        return self.laps.order_by('total_time').first()
+        return self.laps.order_by("total_time").first()
 
     def get_drivers(self):
         """Get list of unique drivers in this session"""
-        return self.laps.values_list('driver_name', flat=True).distinct()
+        return self.laps.values_list("driver_name", flat=True).distinct()
 
 
 class Lap(models.Model):
     """Model representing an individual lap"""
-    session = models.ForeignKey(
-        Session, on_delete=models.CASCADE, related_name='laps'
-    )
+
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="laps")
     lap_number = models.IntegerField()
     driver_name = models.CharField(max_length=200)
     car_index = models.IntegerField()  # Index in the original players array
@@ -48,12 +48,11 @@ class Lap(models.Model):
     cuts = models.IntegerField(default=0)  # Number of track limit violations
 
     class Meta:
-        ordering = ['session', 'lap_number']
-        unique_together = ['session', 'lap_number', 'car_index']
+        ordering = ["session", "lap_number"]
+        unique_together = ["session", "lap_number", "car_index"]
 
     def __str__(self):
-        return (f"Lap {self.lap_number} - {self.driver_name} "
-                f"({self.format_time()})")
+        return f"Lap {self.lap_number} - {self.driver_name} " f"({self.format_time()})"
 
     def format_time(self):
         """Format lap time as MM:SS.mmm"""
@@ -64,6 +63,7 @@ class Lap(models.Model):
     def get_sector_times(self):
         """Return sector times as a list"""
         return list(self.sectors) if self.sectors else []
+
 
 # NOTE: After this change, you must create and run a migration, and update
 # all code that creates or accesses Lap sector times.

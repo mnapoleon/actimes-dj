@@ -1,0 +1,25 @@
+# Development and testing dependencies
+-r requirements.txt
+
+# Code formatting and linting
+black>=23.0.0
+flake8>=6.0.0
+flake8-django>=1.4.0
+isort>=5.12.0
+
+# Security scanning
+bandit[toml]>=1.7.5
+safety>=2.3.0
+
+# Testing and coverage
+coverage>=7.0.0
+pytest>=7.4.0
+pytest-django>=4.5.2
+pytest-cov>=4.1.0
+
+# Pre-commit hooks
+pre-commit>=3.3.0
+
+# Type checking (optional)
+mypy>=1.5.0
+django-stubs>=4.2.0

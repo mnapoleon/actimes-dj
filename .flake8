@@ -1,0 +1,25 @@
+[flake8]
+max-line-length = 88
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    migrations,
+    .tox,
+    build,
+    dist,
+    *.egg-info
+
+# Ignore some common Django-related warnings
+ignore = 
+    E203,
+    E501,
+    W503,
+    F401
+
+per-file-ignores =
+    __init__.py:F401
+    settings.py:E402
+    */migrations/*:E501,F401
