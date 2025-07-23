@@ -724,3 +724,183 @@ class IntegrationTests(TestCase):
         api_data = api_response.json()
         self.assertEqual(api_data['session']['track'], "Monza")
         self.assertEqual(len(api_data['laps']), 2)
+
+
+class DuplicateFileTests(TestCase):
+    """Test cases for duplicate file detection functionality"""
+
+    def setUp(self):
+        self.client = Client()
+        self.valid_json_data = {
+            "track": "Silverstone",
+            "car": "Ferrari SF70H",
+            "players": [{"name": "Test Driver", "car": "Ferrari SF70H"}],
+            "sessions": [{
+                "type": 2,
+                "laps": [{
+                    "lap": 1,
+                    "car": 0,
+                    "time": 85000,
+                    "sectors": [28000, 28500, 28500],
+                    "tyre": "M",
+                    "cuts": 0
+                }]
+            }]
+        }
+
+    def test_file_hash_generation_and_storage(self):
+        """Test that file hash is correctly generated and stored"""
+        json_content = json.dumps(self.valid_json_data)
+        uploaded_file = SimpleUploadedFile(
+            "test_session.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+
+        response = self.client.post(reverse('home'), {
+            'json_file': uploaded_file
+        })
+
+        # Should redirect on success
+        self.assertEqual(response.status_code, 302)
+
+        # Check session was created with hash
+        session = Session.objects.first()
+        self.assertIsNotNone(session.file_hash)
+        self.assertEqual(len(session.file_hash), 64)  # SHA-256 hex length
+
+    def test_duplicate_file_upload_prevention(self):
+        """Test that uploading the same file twice is prevented"""
+        json_content = json.dumps(self.valid_json_data)
+        
+        # Upload first time
+        uploaded_file1 = SimpleUploadedFile(
+            "test_session.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        response1 = self.client.post(reverse('home'), {
+            'json_file': uploaded_file1
+        })
+        self.assertEqual(response1.status_code, 302)  # Success
+        self.assertEqual(Session.objects.count(), 1)
+
+        # Try to upload same content again
+        uploaded_file2 = SimpleUploadedFile(
+            "test_session_copy.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        response2 = self.client.post(reverse('home'), {
+            'json_file': uploaded_file2
+        })
+        
+        # Should not create duplicate session
+        self.assertEqual(Session.objects.count(), 1)
+        
+        # Should show the form with errors (status 200, not redirect)
+        self.assertEqual(response2.status_code, 200)
+        self.assertContains(response2, 'already been uploaded')
+
+    def test_different_files_same_content_detection(self):
+        """Test that files with identical content are detected as duplicates"""
+        json_content = json.dumps(self.valid_json_data)
+        
+        # Upload with one filename
+        uploaded_file1 = SimpleUploadedFile(
+            "session1.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        response1 = self.client.post(reverse('home'), {
+            'json_file': uploaded_file1
+        })
+        self.assertEqual(response1.status_code, 302)
+
+        # Upload same content with different filename
+        uploaded_file2 = SimpleUploadedFile(
+            "session2.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        response2 = self.client.post(reverse('home'), {
+            'json_file': uploaded_file2
+        })
+        
+        # Should only have one session
+        self.assertEqual(Session.objects.count(), 1)
+
+    def test_different_content_allows_upload(self):
+        """Test that files with different content can be uploaded"""
+        # First file
+        json_content1 = json.dumps(self.valid_json_data)
+        uploaded_file1 = SimpleUploadedFile(
+            "session1.json",
+            json_content1.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        response1 = self.client.post(reverse('home'), {
+            'json_file': uploaded_file1
+        })
+        self.assertEqual(response1.status_code, 302)
+
+        # Second file with different content
+        different_data = self.valid_json_data.copy()
+        different_data['track'] = "Monza"
+        json_content2 = json.dumps(different_data)
+        
+        uploaded_file2 = SimpleUploadedFile(
+            "session2.json",
+            json_content2.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        response2 = self.client.post(reverse('home'), {
+            'json_file': uploaded_file2
+        })
+        self.assertEqual(response2.status_code, 302)
+
+        # Should have two different sessions
+        self.assertEqual(Session.objects.count(), 2)
+        
+        # Each should have different hashes
+        sessions = Session.objects.all()
+        hash1 = sessions[0].file_hash
+        hash2 = sessions[1].file_hash
+        self.assertNotEqual(hash1, hash2)
+
+    def test_form_validation_error_message(self):
+        """Test that meaningful error message is shown for duplicates"""
+        from .forms import JSONUploadForm
+        
+        json_content = json.dumps(self.valid_json_data)
+        
+        # Create a session first
+        uploaded_file1 = SimpleUploadedFile(
+            "test.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        # Upload first time through view to create session
+        self.client.post(reverse('home'), {'json_file': uploaded_file1})
+        
+        # Now test form validation directly
+        uploaded_file2 = SimpleUploadedFile(
+            "test_duplicate.json",
+            json_content.encode('utf-8'),
+            content_type="application/json"
+        )
+        
+        form = JSONUploadForm(files={'json_file': uploaded_file2})
+        self.assertFalse(form.is_valid())
+        self.assertIn('json_file', form.errors)
+        
+        error_message = form.errors['json_file'][0]
+        self.assertIn('already been uploaded', error_message)
+        self.assertIn('Existing session', error_message)

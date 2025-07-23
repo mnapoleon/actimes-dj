@@ -98,7 +98,8 @@ class HomeView(FormView):
                 session_type=session_type,
                 file_name=json_file.name,
                 players_data=data['players'],
-                upload_date=upload_date
+                upload_date=upload_date,
+                file_hash=getattr(json_file, '_file_hash', None)
             )
 
             # Create Lap objects from session laps

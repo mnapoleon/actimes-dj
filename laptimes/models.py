@@ -12,9 +12,13 @@ class Session(models.Model):
     upload_date = models.DateTimeField(default=timezone.now)
     file_name = models.CharField(max_length=255)
     players_data = models.JSONField(default=dict)  # Store player information
+    file_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
 
     class Meta:
         ordering = ['-upload_date']
+        indexes = [
+            models.Index(fields=['file_hash']),
+        ]
 
     def __str__(self):
         if self.session_name:

@@ -1,6 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 import json
+import hashlib
 
 from .models import Session
 
@@ -187,6 +188,21 @@ class JSONUploadForm(forms.Form):
 
             if not isinstance(data['sessions'][0]['laps'], list):
                 raise ValidationError('Session laps data must be a list')
+
+            # Generate file hash for duplicate detection
+            file_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
+            
+            # Check for duplicate hash
+            if Session.objects.filter(file_hash=file_hash).exists():
+                existing_session = Session.objects.get(file_hash=file_hash)
+                raise ValidationError(
+                    f'This file has already been uploaded. '
+                    f'Existing session: "{existing_session}" '
+                    f'(uploaded on {existing_session.upload_date.strftime("%Y-%m-%d %H:%M")})'
+                )
+            
+            # Store hash for later use in the view
+            file._file_hash = file_hash
 
             # Reset file pointer for later use
             file.seek(0)
