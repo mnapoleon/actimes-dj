@@ -1,0 +1,239 @@
+{
+  "track": "ks_vallelunga-club_circuit",
+  "number_of_sessions": 1,
+  "players": [
+    { "name": "CuseGoyleX", "car": "abarth500", "skin": "0_white_scorpion" },
+    { "name": "Alex Cardinali", "car": "abarth500", "skin": "black_red" },
+    { "name": "Dominic La Sarthe", "car": "abarth500", "skin": "grey_white" },
+    { "name": "Mitsuo Yoshida", "car": "abarth500", "skin": "light_blue" },
+    {
+      "name": "Pablo Marquez",
+      "car": "abarth500",
+      "skin": "light_blue_scorpion"
+    },
+    { "name": "Dan Gooch", "car": "abarth500", "skin": "pearl" },
+    {
+      "name": "Riccardo Defendi",
+      "car": "abarth500",
+      "skin": "pearl_scorpion"
+    },
+    { "name": "Stefano Lavezzi", "car": "abarth500", "skin": "red_scorpion" }
+  ],
+  "sessions": [
+    {
+      "event": 0,
+      "name": "Quick Race",
+      "type": 3,
+      "lapsCount": 3,
+      "duration": 0,
+      "laps": [
+        {
+          "lap": 0,
+          "car": 0,
+          "sectors": [34944, 40004],
+          "time": 74948,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 1,
+          "car": 0,
+          "sectors": [26958, 38007],
+          "time": 64965,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 2,
+          "car": 0,
+          "sectors": [32242, 37472],
+          "time": 69714,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 0,
+          "car": 1,
+          "sectors": [31740, 36755],
+          "time": 68495,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 1,
+          "car": 1,
+          "sectors": [25783, 36914],
+          "time": 62697,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 2,
+          "car": 1,
+          "sectors": [26018, 37103],
+          "time": 63121,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 0,
+          "car": 2,
+          "sectors": [33414, 36710],
+          "time": 70124,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 1,
+          "car": 2,
+          "sectors": [25949, 37180],
+          "time": 63129,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 2,
+          "car": 2,
+          "sectors": [25969, 36639],
+          "time": 62608,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 0,
+          "car": 3,
+          "sectors": [32365, 37102],
+          "time": 69467,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 1,
+          "car": 3,
+          "sectors": [26008, 36662],
+          "time": 62670,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 2,
+          "car": 3,
+          "sectors": [26149, 36873],
+          "time": 63022,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 0,
+          "car": 4,
+          "sectors": [34381, 37966],
+          "time": 72347,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 1,
+          "car": 4,
+          "sectors": [26067, 37043],
+          "time": 63110,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 2,
+          "car": 4,
+          "sectors": [26107, 37229],
+          "time": 63336,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 0,
+          "car": 5,
+          "sectors": [33063, 38654],
+          "time": 71717,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 1,
+          "car": 5,
+          "sectors": [25823, 37107],
+          "time": 62930,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 2,
+          "car": 5,
+          "sectors": [26084, 37261],
+          "time": 63345,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 0,
+          "car": 6,
+          "sectors": [34723, 38884],
+          "time": 73607,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 1,
+          "car": 6,
+          "sectors": [26237, 37512],
+          "time": 63749,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 2,
+          "car": 6,
+          "sectors": [26197, 37273],
+          "time": 63470,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 0,
+          "car": 7,
+          "sectors": [34070, 39222],
+          "time": 73292,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 1,
+          "car": 7,
+          "sectors": [25905, 37431],
+          "time": 63336,
+          "cuts": 0,
+          "tyre": "SM"
+        },
+        {
+          "lap": 2,
+          "car": 7,
+          "sectors": [26324, 37171],
+          "time": 63495,
+          "cuts": 0,
+          "tyre": "SM"
+        }
+      ],
+      "lapstotal": [3, 3, 3, 3, 3, 3, 3, 3],
+      "bestLaps": [
+        { "car": 0, "time": 64965, "lap": 1 },
+        { "car": 1, "time": 62697, "lap": 1 },
+        { "car": 2, "time": 62608, "lap": 2 },
+        { "car": 3, "time": 62670, "lap": 1 },
+        { "car": 4, "time": 63110, "lap": 1 },
+        { "car": 5, "time": 62930, "lap": 1 },
+        { "car": 6, "time": 63470, "lap": 2 },
+        { "car": 7, "time": 63336, "lap": 1 }
+      ],
+      "raceResult": [1, 3, 2, 5, 4, 7, 6, 0]
+    }
+  ],
+  "extras": [{ "name": "bestlap", "time": 64965 }],
+  "__raceIni": "[EVENT]\r\nNAME=Abarth 500 SS at Vallelunga Club\r\nDESCRIPTION=The local Abarth club is organizing a small single maker race. Show your skills in this fast paced 3 laps race.\r\nDESCRIPTION_IT=Il club Abarth locale sta organizzando una breve gara monomarca. Dimostra le tue abilità in questa rapida gara da 3 giri.\r\n\r\n[RACE]\r\nTRACK=ks_vallelunga\r\nCONFIG_TRACK=club_circuit\r\nMODEL=abarth500\r\nCARS=8\r\nAI_LEVEL=90\r\nDRIFT_MODE=0\r\nRACE_LAPS=3\r\nFIXED_SETUP=0\r\nPENALTIES=1\r\nMODEL_CONFIG=\r\nSKIN=0_white_scorpion\r\n\r\n[GHOST_CAR]\r\nRECORDING=0\r\nPLAYING=0\r\nSECONDS_ADVANTAGE=0\r\nLOAD=1\r\nFILE=\r\nENABLED=0\r\n\r\n[LIGHTING]\r\nSUN_ANGLE=64\r\nTIME_MULT=1\r\nCLOUD_SPEED=0.2\r\n__TRACK_GEOTAG_LAT=41.898399\r\n__TRACK_GEOTAG_LONG=12.4956\r\n__TRACK_TIMEZONE_BASE_OFFSET=3600\r\n__TRACK_TIMEZONE_OFFSET=7200\r\n__TRACK_TIMEZONE_DTS=1\r\n\r\n[GROOVE]\r\nVIRTUAL_LAPS=10\r\nMAX_LAPS=30\r\nSTARTING_LAPS=0\r\n\r\n[TEMPERATURE]\r\nAMBIENT=26\r\nROAD=32\r\n\r\n[DYNAMIC_TRACK]\r\nPRESET=5\r\nSESSION_START=100\r\nRANDOMNESS=0\r\nLAP_GAIN=1\r\nSESSION_TRANSFER=100\r\n\r\n[SESSION_0]\r\nSTARTING_POSITION=8\r\nNAME=Quick Race\r\nTYPE=3\r\nLAPS=3\r\nDURATION_MINUTES=0\r\nSPAWN_SET=START\r\n\r\n[CAR_0]\r\nSETUP=\r\nMODEL=-\r\nSKIN=0_white_scorpion\r\nDRIVER_NAME=CuseGoyleX\r\nNATIONALITY=Other\r\nMODEL_CONFIG=\r\nNATION_CODE=OTH\r\n\r\n[CAR_1]\r\nMODEL=abarth500\r\nSETUP=vallelunga-club\r\nAI_LEVEL=100\r\nSKIN=black_red\r\nDRIVER_NAME=Alex Cardinali\r\nNATIONALITY=USA\r\nMODEL_CONFIG=\r\n\r\n[CAR_2]\r\nMODEL=abarth500\r\nSETUP=vallelunga-club\r\nAI_LEVEL=100\r\nSKIN=grey_white\r\nDRIVER_NAME=Dominic La Sarthe\r\nNATIONALITY=France\r\nMODEL_CONFIG=\r\n\r\n[CAR_3]\r\nMODEL=abarth500\r\nSETUP=vallelunga-club\r\nAI_LEVEL=100\r\nSKIN=light_blue\r\nDRIVER_NAME=Mitsuo Yoshida\r\nNATIONALITY=Japan\r\nMODEL_CONFIG=\r\n\r\n[CAR_4]\r\nMODEL=abarth500\r\nSETUP=vallelunga-club\r\nAI_LEVEL=100\r\nSKIN=light_blue_scorpion\r\nDRIVER_NAME=Pablo Marquez\r\nNATIONALITY=Spain\r\nMODEL_CONFIG=\r\n\r\n[CAR_5]\r\nMODEL=abarth500\r\nSETUP=vallelunga-club\r\nAI_LEVEL=100\r\nSKIN=pearl\r\nDRIVER_NAME=Dan Gooch\r\nNATIONALITY=Great Britain\r\nMODEL_CONFIG=\r\n\r\n[CAR_6]\r\nMODEL=abarth500\r\nSETUP=vallelunga-club\r\nAI_LEVEL=100\r\nSKIN=pearl_scorpion\r\nDRIVER_NAME=Riccardo Defendi\r\nNATIONALITY=Italy\r\nMODEL_CONFIG=\r\n\r\n[CAR_7]\r\nMODEL=abarth500\r\nSETUP=vallelunga-club\r\nAI_LEVEL=100\r\nSKIN=red_scorpion\r\nDRIVER_NAME=Stefano Lavezzi\r\nNATIONALITY=Argentina\r\nMODEL_CONFIG=\r\n\r\n[CONDITION_0]\r\nTYPE=POSITION\r\nOBJECTIVE=3\r\n\r\n[CONDITION_1]\r\nTYPE=POSITION\r\nOBJECTIVE=2\r\n\r\n[CONDITION_2]\r\nTYPE=POSITION\r\nOBJECTIVE=1\r\n\r\n[BENCHMARK]\r\nACTIVE=0\r\n\r\n[REPLAY]\r\nACTIVE=0\r\n\r\n[REMOTE]\r\nACTIVE=0\r\n\r\n"
+}
