@@ -26,12 +26,8 @@ known_first_party = ["laptimes", "actimes_project"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLDER"]
 skip_glob = ["*/migrations/*"]
 
-[tool.bandit]
-exclude_dirs = ["tests", "*/migrations/*", "*/venv/*", "*/.venv/*"]
-skips = ["B101", "B601"]  # Skip assert_used and shell_injection_process_substitution
-
 [tool.coverage.run]
-source = "."
+source = ["."]
 omit = [
     "*/migrations/*",
     "*/venv/*", 

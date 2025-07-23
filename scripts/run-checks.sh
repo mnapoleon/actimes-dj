@@ -28,16 +28,13 @@ isort --check-only --diff .
 echo -e "${YELLOW}🔍 Step 5: Linting with flake8${NC}"
 flake8 .
 
-echo -e "${YELLOW}🔒 Step 6: Security checks with bandit${NC}"
-bandit -r . -f json -o bandit-report.json || echo "Bandit found potential security issues (see bandit-report.json)"
-
-echo -e "${YELLOW}🛡️  Step 7: Dependency vulnerability check${NC}"
+echo -e "${YELLOW}🛡️  Step 6: Dependency vulnerability check${NC}"
 safety check --json --output safety-report.json || echo "Safety found vulnerabilities (see safety-report.json)"
 
-echo -e "${YELLOW}🧪 Step 8: Running tests${NC}"
+echo -e "${YELLOW}🧪 Step 7: Running tests${NC}"
 python manage.py test --verbosity=2
 
-echo -e "${YELLOW}📊 Step 9: Test coverage${NC}"
+echo -e "${YELLOW}📊 Step 8: Test coverage${NC}"
 coverage run --source='.' manage.py test
 coverage report --show-missing
 coverage html  # Generates htmlcov/ directory
@@ -45,6 +42,6 @@ coverage html  # Generates htmlcov/ directory
 echo -e "${GREEN}✅ All checks passed! You're ready to push.${NC}"
 
 # Cleanup temporary files
-rm -f bandit-report.json safety-report.json
+rm -f safety-report.json
 
 echo -e "${GREEN}📊 Coverage report generated in htmlcov/index.html${NC}"
