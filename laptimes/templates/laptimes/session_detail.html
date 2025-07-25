@@ -57,6 +57,44 @@
     </div>
 </div>
 
+<!-- Driver Management Card -->
+{% if drivers %}
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="card-title mb-0">Driver Management</h2>
+            <small class="text-muted">{{ drivers|length }} driver{{ drivers|length|pluralize }}</small>
+        </div>
+        <p class="text-muted mb-3">Manage drivers in this session. Remove drivers to delete all their lap data.</p>
+        
+        <div class="row g-3">
+            {% for driver in drivers %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-secondary">
+                    <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0">{{ driver }}</h6>
+                                <small class="text-muted">Multiple laps</small>
+                            </div>
+                            <form method="post" action="{% url 'delete_driver' session.pk driver %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                        title="Delete all laps for {{ driver }}"
+                                        onclick="return confirm('Are you sure you want to delete all laps for {{ driver }}?\n\nThis will permanently remove:\n• All lap times for {{ driver }}\n• All sector times for {{ driver }}\n• This data cannot be recovered\n\nClick OK to proceed or Cancel to keep the data.');">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="card">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -81,30 +119,6 @@
                 </select>
             </div>
         </div>
-        
-        <!-- Driver Management Section -->
-        {% if drivers %}
-        <div class="card bg-light mb-3">
-            <div class="card-body">
-                <h6 class="card-title">Driver Management</h6>
-                <p class="card-text text-muted small">Remove drivers and all their lap data from this session</p>
-                <div class="d-flex flex-wrap gap-2">
-                    {% for driver in drivers %}
-                    <div class="d-flex align-items-center">
-                        <span class="badge bg-secondary me-2">{{ driver }}</span>
-                        <form method="post" action="{% url 'delete_driver' session.pk driver %}" class="d-inline" 
-                              onsubmit="return confirm('Are you sure you want to delete all laps for {{ driver }}? This action cannot be undone.');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete {{ driver }}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
         
         <div class="table-responsive">
             <table class="table table-striped table-hover table-bordered">
