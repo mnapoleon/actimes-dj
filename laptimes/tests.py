@@ -475,9 +475,12 @@ class SessionDetailViewTests(TestCase):
         self.assertIn("chart_data", context)
         self.assertIn("fastest_lap", context)
         self.assertIn("sector_count", context)
+        self.assertIn("driver_lap_counts", context)
 
         self.assertEqual(context["session"], self.session)
         self.assertEqual(set(context["drivers"]), {"Driver 1", "Driver 2"})
+        self.assertEqual(context["driver_lap_counts"]["Driver 1"], 1)
+        self.assertEqual(context["driver_lap_counts"]["Driver 2"], 1)
 
 
 class SessionEditViewTests(TestCase):

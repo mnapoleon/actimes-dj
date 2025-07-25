@@ -188,6 +188,12 @@ class SessionDetailView(ListView):
             .order_by("driver_name")
         )
 
+        # Add driver lap counts for enhanced display
+        driver_lap_counts = {}
+        for driver in context["drivers"]:
+            driver_lap_counts[driver] = all_laps.filter(driver_name=driver).count()
+        context["driver_lap_counts"] = driver_lap_counts
+
         # Get unique lap numbers for chart labels (excluding lap 0)
         unique_lap_numbers = list(
             all_laps.filter(lap_number__gt=0)
