@@ -6,7 +6,13 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
-from django.views.generic import DeleteView, FormView, ListView, TemplateView, UpdateView
+from django.views.generic import (
+    DeleteView,
+    FormView,
+    ListView,
+    TemplateView,
+    UpdateView,
+)
 
 from .forms import JSONUploadForm, SessionEditForm
 from .models import Lap, Session
@@ -324,33 +330,35 @@ class SessionDeleteView(DeleteView):
 
 class DriverDeleteView(TemplateView):
     """View for confirming driver deletion"""
-    
+
     template_name = "laptimes/driver_confirm_delete.html"
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         session_pk = self.kwargs["session_pk"]
         driver_name = self.kwargs["driver_name"]
-        
+
         context["session"] = get_object_or_404(Session, pk=session_pk)
         context["driver_name"] = driver_name
-        
+
         # Get driver's laps for statistics
         driver_laps = context["session"].laps.filter(driver_name=driver_name)
         context["lap_count"] = driver_laps.count()
-        context["driver_laps"] = driver_laps.order_by("lap_number")[:5]  # Show first 5 laps
-        
+        context["driver_laps"] = driver_laps.order_by("lap_number")[
+            :5
+        ]  # Show first 5 laps
+
         return context
-    
+
     def post(self, request, *args, **kwargs):
         """Handle the actual deletion"""
-        session_pk = self.kwargs["session_pk"]  
+        session_pk = self.kwargs["session_pk"]
         driver_name = self.kwargs["driver_name"]
-        
+
         session = get_object_or_404(Session, pk=session_pk)
         laps_to_delete = session.laps.filter(driver_name=driver_name)
         lap_count = laps_to_delete.count()
-        
+
         if lap_count > 0:
             laps_to_delete.delete()
             messages.success(
@@ -361,7 +369,7 @@ class DriverDeleteView(TemplateView):
             messages.warning(
                 request, f'No laps found for driver "{driver_name}" in this session.'
             )
-        
+
         return redirect("session_detail", pk=session_pk)
 
 
