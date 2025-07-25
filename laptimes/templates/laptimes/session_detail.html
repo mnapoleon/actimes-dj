@@ -77,14 +77,10 @@
                                 <h6 class="card-title mb-0">{{ driver }}</h6>
                                 <small class="text-white fw-bold">{{ driver_lap_counts|get_item:driver }} lap{{ driver_lap_counts|get_item:driver|pluralize }}</small>
                             </div>
-                            <form method="post" action="{% url 'delete_driver' session.pk driver %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                        title="Delete all {{ driver_lap_counts|get_item:driver }} lap{{ driver_lap_counts|get_item:driver|pluralize }} for {{ driver }}"
-                                        onclick="return confirm('Are you sure you want to delete all {{ driver_lap_counts|get_item:driver }} lap{{ driver_lap_counts|get_item:driver|pluralize }} for {{ driver }}?\n\nThis will permanently remove:\n• All {{ driver_lap_counts|get_item:driver }} lap time{{ driver_lap_counts|get_item:driver|pluralize }} for {{ driver }}\n• All sector times for {{ driver }}\n• This data cannot be recovered\n\nClick OK to proceed or Cancel to keep the data.');">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
+                            <a href="{% url 'driver_delete_confirm' session.pk driver %}" class="btn btn-sm btn-outline-danger" 
+                               title="Delete all {{ driver_lap_counts|get_item:driver }} lap{{ driver_lap_counts|get_item:driver|pluralize }} for {{ driver }}">
+                                <i class="bi bi-trash"></i>
+                            </a>
                         </div>
                     </div>
                 </div>
