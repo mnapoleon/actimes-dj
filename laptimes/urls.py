@@ -14,6 +14,11 @@ urlpatterns = [
         name="session_delete",
     ),
     path(
+        "session/<int:session_pk>/delete-driver/<str:driver_name>/confirm/",
+        views.DriverDeleteView.as_view(),
+        name="driver_delete_confirm",
+    ),
+    path(
         "session/<int:session_pk>/delete-driver/<str:driver_name>/",
         views.delete_driver_from_session,
         name="delete_driver",

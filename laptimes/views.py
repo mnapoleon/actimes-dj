@@ -6,7 +6,13 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
-from django.views.generic import DeleteView, FormView, ListView, UpdateView
+from django.views.generic import (
+    DeleteView,
+    FormView,
+    ListView,
+    TemplateView,
+    UpdateView,
+)
 
 from .forms import JSONUploadForm, SessionEditForm
 from .models import Lap, Session
@@ -188,6 +194,12 @@ class SessionDetailView(ListView):
             .order_by("driver_name")
         )
 
+        # Add driver lap counts for enhanced display
+        driver_lap_counts = {}
+        for driver in context["drivers"]:
+            driver_lap_counts[driver] = all_laps.filter(driver_name=driver).count()
+        context["driver_lap_counts"] = driver_lap_counts
+
         # Get unique lap numbers for chart labels (excluding lap 0)
         unique_lap_numbers = list(
             all_laps.filter(lap_number__gt=0)
@@ -316,6 +328,51 @@ class SessionDeleteView(DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
+class DriverDeleteView(TemplateView):
+    """View for confirming driver deletion"""
+
+    template_name = "laptimes/driver_confirm_delete.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        session_pk = self.kwargs["session_pk"]
+        driver_name = self.kwargs["driver_name"]
+
+        context["session"] = get_object_or_404(Session, pk=session_pk)
+        context["driver_name"] = driver_name
+
+        # Get driver's laps for statistics
+        driver_laps = context["session"].laps.filter(driver_name=driver_name)
+        context["lap_count"] = driver_laps.count()
+        context["driver_laps"] = driver_laps.order_by("lap_number")[
+            :5
+        ]  # Show first 5 laps
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        """Handle the actual deletion"""
+        session_pk = self.kwargs["session_pk"]
+        driver_name = self.kwargs["driver_name"]
+
+        session = get_object_or_404(Session, pk=session_pk)
+        laps_to_delete = session.laps.filter(driver_name=driver_name)
+        lap_count = laps_to_delete.count()
+
+        if lap_count > 0:
+            laps_to_delete.delete()
+            messages.success(
+                request,
+                f'Successfully removed driver "{driver_name}" and all {lap_count} lap{"" if lap_count == 1 else "s"} from this session.',
+            )
+        else:
+            messages.warning(
+                request, f'No laps found for driver "{driver_name}" in this session.'
+            )
+
+        return redirect("session_detail", pk=session_pk)
+
+
 def session_data_api(_request, pk):
     """API endpoint to get session data as JSON"""
     session = get_object_or_404(Session, pk=pk)
@@ -362,7 +419,7 @@ def delete_driver_from_session(request, session_pk, driver_name):
         laps_to_delete.delete()
         messages.success(
             request,
-            f'Successfully deleted {lap_count} lap(s) for driver "{driver_name}".',
+            f'Successfully removed driver "{driver_name}" and all {lap_count} lap{"" if lap_count == 1 else "s"} from this session.',
         )
 
     return redirect("session_detail", pk=session_pk)

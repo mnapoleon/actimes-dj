@@ -1,0 +1,105 @@
+{% extends 'laptimes/base.html' %}
+
+{% block title %}Delete Driver | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'session_detail' session.pk %}">{{ session }}</a></li>
+                <li class="breadcrumb-item active">Delete Driver</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h2 class="card-title mb-0">
+                    <i class="bi bi-person-x me-2"></i>Confirm Driver Deletion
+                </h2>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning" role="alert">
+                    <h5 class="alert-heading">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Warning!
+                    </h5>
+                    <p>You are about to permanently delete driver "{{ driver_name }}" and all their lap data from this session. This action cannot be undone.</p>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Driver Details</h5>
+                        <dl class="row mb-3">
+                            <dt class="col-sm-3">Driver:</dt>
+                            <dd class="col-sm-9"><strong>{{ driver_name }}</strong></dd>
+                            <dt class="col-sm-3">Session:</dt>
+                            <dd class="col-sm-9">{{ session }}</dd>
+                            <dt class="col-sm-3">Total Laps:</dt>
+                            <dd class="col-sm-9">{{ lap_count }} lap{{ lap_count|pluralize }}</dd>
+                        </dl>
+
+                        {% if driver_laps %}
+                        <h6 class="mb-2">Sample Laps to be Deleted:</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Lap</th>
+                                        <th>Time</th>
+                                        <th>Tyre</th>
+                                        <th>Cuts</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lap in driver_laps %}
+                                    <tr>
+                                        <td>{{ lap.lap_number }}</td>
+                                        <td>{{ lap.format_time }}</td>
+                                        <td>{{ lap.tyre_compound }}</td>
+                                        <td>{{ lap.cuts }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% if lap_count > 5 %}
+                                    <tr>
+                                        <td colspan="4" class="text-muted text-center">
+                                            <small>... and {{ lap_count|add:"-5" }} more lap{{ lap_count|add:"-5"|pluralize }}</small>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="alert alert-danger" role="alert">
+                    <h6 class="alert-heading">This will permanently remove:</h6>
+                    <ul class="mb-0">
+                        <li>All {{ lap_count }} lap time{{ lap_count|pluralize }} for {{ driver_name }}</li>
+                        <li>All sector times for {{ driver_name }}</li>
+                        <li>All performance data for {{ driver_name }}</li>
+                    </ul>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-person-x me-1"></i>Yes, Delete Driver
+                        </button>
+                        <a href="{% url 'session_detail' session.pk %}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg me-1"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
