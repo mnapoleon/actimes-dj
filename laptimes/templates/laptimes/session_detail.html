@@ -455,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', function() {
     const ctx = document.getElementById('lapTimesChart').getContext('2d');
     
-    // Prepare data for chart (excluding lap 0)
+    // Prepare data for chart (includes lap 0 for Race sessions only)
     const chartData = {
         labels: [{% for lap_number in unique_lap_numbers %}{{ lap_number }}{% if not forloop.last %}, {% endif %}{% endfor %}],
         datasets: [

@@ -224,10 +224,17 @@ class SessionDetailView(ListView):
             else:
                 context["best_optimal_time"] = None
 
-        # Get unique lap numbers for chart labels (excluding lap 0)
+        # Get unique lap numbers for chart labels
+        # Include lap 0 (out lap) only for Race sessions
+        if self.session.session_type == "Race":
+            # Include all laps starting from 0 for races
+            lap_filter = all_laps
+        else:
+            # Exclude lap 0 for Practice/Qualifying sessions
+            lap_filter = all_laps.filter(lap_number__gt=0)
+
         unique_lap_numbers = list(
-            all_laps.filter(lap_number__gt=0)
-            .values_list("lap_number", flat=True)
+            lap_filter.values_list("lap_number", flat=True)
             .distinct()
             .order_by("lap_number")
         )
