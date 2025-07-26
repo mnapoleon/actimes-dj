@@ -1,8 +1,6 @@
 import json
-import tempfile
 
 from django.contrib.auth.models import User
-from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
