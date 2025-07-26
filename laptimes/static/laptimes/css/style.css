@@ -267,6 +267,155 @@ body {
   color: #ffffff !important;
 }
 
+/* Purple text class for fastest times */
+.text-purple {
+  color: var(--purple-color) !important;
+}
+
+/* Driver Performance Grid Styling */
+.driver-performance-card {
+  transition: all 0.3s ease;
+  border-color: var(--border-color) !important;
+  background-color: #ffffff !important;
+  color: var(--text-color) !important;
+}
+
+.driver-performance-card .card-header {
+  background-color: #f8f9fa !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.driver-performance-card .card-body,
+.driver-performance-card .card-footer {
+  background-color: #ffffff !important;
+  color: var(--text-color) !important;
+}
+
+.driver-performance-card .card-title {
+  color: var(--primary-color) !important;
+}
+
+/* Hidden driver state */
+.driver-card.driver-hidden .driver-performance-card {
+  opacity: 0.5;
+  transform: scale(0.95);
+  border-color: #dc3545 !important;
+  background-color: #f8f9fa !important;
+}
+
+.driver-card.driver-hidden .card-header {
+  background-color: #fee !important;
+  border-bottom-color: #dc3545 !important;
+}
+
+.driver-card.driver-hidden .card-title {
+  color: #dc3545 !important;
+  text-decoration: line-through;
+}
+
+/* Toggle switch styling */
+.form-check-input:checked {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.form-check-input:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25) !important;
+}
+
+/* Performance metrics styling */
+.driver-performance-card .text-success {
+  color: #16a34a !important;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.driver-performance-card .text-info {
+  color: #0891b2 !important;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.driver-performance-card .text-primary {
+  color: var(--primary-color) !important;
+}
+
+.driver-performance-card .text-secondary {
+  color: #6b7280 !important;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Potential improvement badge */
+.badge.bg-warning.text-dark {
+  background-color: #fbbf24 !important;
+  color: #1f2937 !important;
+  font-weight: 600;
+}
+
+/* Driver grid bulk actions */
+.btn-group .btn {
+  border-radius: 6px !important;
+}
+
+.btn-group .btn:first-child {
+  border-top-left-radius: 8px !important;
+  border-bottom-left-radius: 8px !important;
+}
+
+.btn-group .btn:last-child {
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+
+/* Hidden drivers alert styling */
+.alert-info {
+  background-color: #dbeafe !important;
+  border-color: var(--primary-color) !important;
+  color: var(--text-color) !important;
+}
+
+.alert-info .btn-outline-info {
+  color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.alert-info .btn-outline-info:hover {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: white !important;
+}
+
+/* Driver grid card hover effects */
+.driver-performance-card:hover:not(.driver-card.driver-hidden .driver-performance-card) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: var(--primary-color) !important;
+}
+
+/* Smooth transitions for all interactive elements */
+.driver-card,
+.driver-performance-card,
+.form-check-input,
+.btn {
+  transition: all 0.3s ease;
+}
+
+/* Performance statistics layout improvements */
+.driver-performance-card .row.g-2 {
+  margin-left: -0.25rem;
+  margin-right: -0.25rem;
+}
+
+.driver-performance-card .row.g-2 > .col-6 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+/* Ensure proper text contrast in driver cards */
+.driver-performance-card small.text-muted {
+  color: #6b7280 !important;
+}
+
 /* Responsive improvements */
 @media (max-width: 768px) {
   .container-fluid {
@@ -283,5 +432,39 @@ body {
 
   .card-body {
     padding: 1rem;
+  }
+
+  /* Driver grid mobile responsiveness */
+  .driver-performance-card .card-body {
+    padding: 0.75rem;
+  }
+
+  .driver-performance-card .fs-6 {
+    font-size: 0.9rem !important;
+  }
+
+  .btn-group .btn {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Stack driver cards vertically on very small screens */
+  .driver-card {
+    margin-bottom: 1rem;
+  }
+
+  .d-flex.gap-2 {
+    flex-direction: column;
+    gap: 0.5rem !important;
+  }
+
+  .btn-group {
+    width: 100%;
+  }
+
+  .btn-group .btn {
+    flex: 1;
   }
 }

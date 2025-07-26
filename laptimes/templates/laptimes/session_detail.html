@@ -57,35 +57,119 @@
     </div>
 </div>
 
-<!-- Driver Management Card -->
-{% if drivers %}
-<div class="card mb-4">
+<!-- Enhanced Driver Grid -->
+{% if driver_statistics %}
+<div class="card mb-4" id="driverGrid">
     <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="card-title mb-0">Driver Management</h2>
-            <small class="text-muted">{{ drivers|length }} driver{{ drivers|length|pluralize }}</small>
+            <h2 class="card-title mb-0">Driver Performance Grid</h2>
+            <div class="d-flex gap-2 align-items-center">
+                <small class="text-muted">{{ driver_statistics|length }} driver{{ driver_statistics|length|pluralize }}</small>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-primary" id="showAllDrivers">Show All</button>
+                    <button type="button" class="btn btn-outline-secondary" id="hideAllDrivers">Hide All</button>
+                </div>
+            </div>
         </div>
-        <p class="text-muted mb-3">Manage drivers in this session. Remove drivers to delete all their lap data.</p>
         
-        <div class="row g-3">
-            {% for driver in drivers %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card border-secondary">
+        <p class="text-muted mb-4">
+            <i class="bi bi-info-circle"></i>
+            Performance statistics and visibility controls for each driver. Use toggles to filter drivers from the lap times table and chart.
+        </p>
+        
+        <div class="row g-3" id="driverCards">
+            {% for driver_name, stats in driver_statistics.items %}
+            <div class="col-sm-6 col-lg-4 col-xl-3 driver-card" data-driver="{{ driver_name }}">
+                <div class="card h-100 border-2 driver-performance-card">
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0 fw-bold text-primary">{{ driver_name }}</h6>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input driver-toggle" type="checkbox" 
+                                   id="toggle-{{ driver_name|slugify }}" 
+                                   data-driver="{{ driver_name }}" checked>
+                            <label class="form-check-label visually-hidden" for="toggle-{{ driver_name|slugify }}">
+                                Show {{ driver_name }}
+                            </label>
+                        </div>
+                    </div>
                     <div class="card-body py-2">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="card-title mb-0">{{ driver }}</h6>
-                                <small class="text-white fw-bold">{{ driver_lap_counts|get_item:driver }} lap{{ driver_lap_counts|get_item:driver|pluralize }}</small>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="fw-bold fs-6 
+                                        {% if stats.best_lap_time == fastest_lap_time %}text-purple{% else %}text-success{% endif %}">
+                                        {{ stats.best_lap_time|format_laptime }}
+                                    </div>
+                                    <small class="text-muted">Best Lap</small>
+                                </div>
                             </div>
-                            <a href="{% url 'driver_delete_confirm' session.pk driver %}" class="btn btn-sm btn-outline-danger" 
-                               title="Delete all {{ driver_lap_counts|get_item:driver }} lap{{ driver_lap_counts|get_item:driver|pluralize }} for {{ driver }}">
-                                <i class="bi bi-trash"></i>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="fw-bold fs-6 
+                                        {% if stats.optimal_lap_time and stats.optimal_lap_time == best_optimal_time %}text-purple{% else %}text-info{% endif %}">
+                                        {% if stats.optimal_lap_time %}
+                                            {{ stats.optimal_lap_time|format_laptime }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted">Optimal</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="fw-bold text-primary">{{ stats.lap_count }}</div>
+                                    <small class="text-muted">Lap{{ stats.lap_count|pluralize }}</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-center">
+                                    <div class="fw-bold text-secondary fs-6">{{ stats.avg_lap_time|format_laptime }}</div>
+                                    <small class="text-muted">Average</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if stats.optimal_lap_time and stats.best_lap_time > stats.optimal_lap_time %}
+                        <div class="text-center mb-2">
+                            <small class="badge bg-warning text-dark">
+                                <i class="bi bi-arrow-up"></i>
+                                {{ stats.best_lap_time|time_delta:stats.optimal_lap_time }} potential
+                            </small>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="text-center">
+                            <small class="text-muted">
+                                Consistency: ±{{ stats.consistency|floatformat:3 }}s
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer py-2">
+                        <div class="d-flex justify-content-center">
+                            <a href="{% url 'driver_delete_confirm' session.pk driver_name %}" 
+                               class="btn btn-sm btn-outline-danger" 
+                               title="Delete all {{ stats.lap_count }} lap{{ stats.lap_count|pluralize }} for {{ driver_name }}">
+                                <i class="bi bi-trash"></i> Remove Driver
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
             {% endfor %}
+        </div>
+        
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-info d-none" id="hiddenDriversAlert">
+                    <i class="bi bi-eye-slash"></i>
+                    <span id="hiddenDriversCount">0</span> driver(s) hidden from lap times table and chart.
+                    <button type="button" class="btn btn-sm btn-outline-info ms-2" id="showHiddenDrivers">Show All</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -219,6 +303,154 @@
 
 {% block extra_js %}
 <script>
+// Driver Grid Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // State management
+    let hiddenDrivers = new Set();
+    const STORAGE_KEY = 'hiddenDrivers_session_{{ session.pk }}';
+    
+    // Load saved state from localStorage
+    function loadDriverState() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                hiddenDrivers = new Set(JSON.parse(saved));
+                
+                // Apply saved state to toggles and cards
+                hiddenDrivers.forEach(driverName => {
+                    const toggle = document.querySelector(`[data-driver="${driverName}"]`);
+                    const card = document.querySelector(`.driver-card[data-driver="${driverName}"]`);
+                    
+                    if (toggle) {
+                        toggle.checked = false;
+                    }
+                    if (card) {
+                        card.classList.add('driver-hidden');
+                    }
+                });
+                
+                updateHiddenDriversAlert();
+                filterLapTable();
+            }
+        } catch (e) {
+            console.warn('Failed to load driver state:', e);
+        }
+    }
+    
+    // Save state to localStorage
+    function saveDriverState() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([...hiddenDrivers]));
+        } catch (e) {
+            console.warn('Failed to save driver state:', e);
+        }
+    }
+    
+    // Update hidden drivers alert
+    function updateHiddenDriversAlert() {
+        const alert = document.getElementById('hiddenDriversAlert');
+        const count = document.getElementById('hiddenDriversCount');
+        
+        if (hiddenDrivers.size > 0) {
+            count.textContent = hiddenDrivers.size;
+            alert.classList.remove('d-none');
+        } else {
+            alert.classList.add('d-none');
+        }
+    }
+    
+    // Filter lap table based on hidden drivers
+    function filterLapTable() {
+        const tableRows = document.querySelectorAll('tbody tr');
+        
+        tableRows.forEach(row => {
+            const driverCell = row.querySelector('td:nth-child(2) .fw-bold');
+            if (driverCell) {
+                const driverName = driverCell.textContent.trim();
+                if (hiddenDrivers.has(driverName)) {
+                    row.style.display = 'none';
+                } else {
+                    row.style.display = '';
+                }
+            }
+        });
+    }
+    
+    // Update chart visibility (placeholder for future implementation)
+    function updateChartVisibility() {
+        // This will be implemented when we integrate with the chart
+        console.log('Chart visibility updated for hidden drivers:', [...hiddenDrivers]);
+    }
+    
+    // Handle individual driver toggle
+    document.querySelectorAll('.driver-toggle').forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const driverName = this.dataset.driver;
+            const card = document.querySelector(`.driver-card[data-driver="${driverName}"]`);
+            
+            if (this.checked) {
+                // Show driver
+                hiddenDrivers.delete(driverName);
+                card.classList.remove('driver-hidden');
+            } else {
+                // Hide driver
+                hiddenDrivers.add(driverName);
+                card.classList.add('driver-hidden');
+            }
+            
+            saveDriverState();
+            updateHiddenDriversAlert();
+            filterLapTable();
+            updateChartVisibility();
+        });
+    });
+    
+    // Handle "Show All" button
+    document.getElementById('showAllDrivers').addEventListener('click', function() {
+        hiddenDrivers.clear();
+        
+        document.querySelectorAll('.driver-toggle').forEach(toggle => {
+            toggle.checked = true;
+        });
+        
+        document.querySelectorAll('.driver-card').forEach(card => {
+            card.classList.remove('driver-hidden');
+        });
+        
+        saveDriverState();
+        updateHiddenDriversAlert();
+        filterLapTable();
+        updateChartVisibility();
+    });
+    
+    // Handle "Hide All" button
+    document.getElementById('hideAllDrivers').addEventListener('click', function() {
+        document.querySelectorAll('.driver-toggle').forEach(toggle => {
+            const driverName = toggle.dataset.driver;
+            hiddenDrivers.add(driverName);
+            toggle.checked = false;
+            
+            const card = document.querySelector(`.driver-card[data-driver="${driverName}"]`);
+            if (card) {
+                card.classList.add('driver-hidden');
+            }
+        });
+        
+        saveDriverState();
+        updateHiddenDriversAlert();
+        filterLapTable();
+        updateChartVisibility();
+    });
+    
+    // Handle "Show Hidden Drivers" button in alert
+    document.getElementById('showHiddenDrivers').addEventListener('click', function() {
+        document.getElementById('showAllDrivers').click();
+    });
+    
+    // Initialize state
+    loadDriverState();
+});
+
 // Lap times chart
 document.addEventListener('DOMContentLoaded', function() {
     const ctx = document.getElementById('lapTimesChart').getContext('2d');

@@ -200,6 +200,25 @@ class SessionDetailView(ListView):
             driver_lap_counts[driver] = all_laps.filter(driver_name=driver).count()
         context["driver_lap_counts"] = driver_lap_counts
 
+        # Add comprehensive driver statistics for the driver grid
+        driver_stats = self.session.get_driver_statistics()
+        context["driver_statistics"] = driver_stats
+        
+        # Calculate fastest lap and best optimal lap across all drivers for highlighting
+        if driver_stats:
+            # Find fastest lap time across all drivers
+            fastest_lap_time = min(stats["best_lap_time"] for stats in driver_stats.values())
+            context["fastest_lap_time"] = fastest_lap_time
+            
+            # Find best optimal lap time across all drivers (excluding None values)
+            optimal_times = [stats["optimal_lap_time"] for stats in driver_stats.values() 
+                           if stats["optimal_lap_time"] is not None]
+            if optimal_times:
+                best_optimal_time = min(optimal_times)
+                context["best_optimal_time"] = best_optimal_time
+            else:
+                context["best_optimal_time"] = None
+
         # Get unique lap numbers for chart labels (excluding lap 0)
         unique_lap_numbers = list(
             all_laps.filter(lap_number__gt=0)

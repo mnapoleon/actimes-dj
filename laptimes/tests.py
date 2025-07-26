@@ -90,6 +90,137 @@ class SessionModelTests(TestCase):
         fastest = self.session.get_fastest_lap()
         self.assertEqual(fastest, lap2)
 
+    def test_get_optimal_lap_time_single_driver(self):
+        """Test optimal lap time calculation for single driver"""
+        # Create laps with different sector times
+        Lap.objects.create(
+            session=self.session,
+            lap_number=1,
+            driver_name="Test Driver",
+            car_index=0,
+            total_time=90.567,
+            sectors=[30.123, 30.234, 30.210],
+            tyre_compound="M",
+            cuts=0,
+        )
+        Lap.objects.create(
+            session=self.session,
+            lap_number=2,
+            driver_name="Test Driver",
+            car_index=0,
+            total_time=89.0,
+            sectors=[29.5, 29.8, 29.7],  # Better sectors
+            tyre_compound="S",
+            cuts=0,
+        )
+        
+        optimal_time = self.session.get_optimal_lap_time("Test Driver")
+        # Should be sum of best sectors: 29.5 + 29.8 + 29.7 = 89.0
+        self.assertAlmostEqual(optimal_time, 89.0, places=3)
+
+    def test_get_optimal_lap_time_mixed_sectors(self):
+        """Test optimal lap time with mixed best sectors"""
+        Lap.objects.create(
+            session=self.session,
+            lap_number=1,
+            driver_name="Test Driver",
+            car_index=0,
+            total_time=90.567,
+            sectors=[30.123, 30.234, 30.210],
+            tyre_compound="M",
+            cuts=0,
+        )
+        # Create another lap with some better sectors
+        Lap.objects.create(
+            session=self.session,
+            lap_number=2,
+            driver_name="Test Driver",
+            car_index=0,
+            total_time=92.0,
+            sectors=[28.0, 32.0, 32.0],  # Only sector 1 is best
+            tyre_compound="S",
+            cuts=0,
+        )
+        
+        optimal_time = self.session.get_optimal_lap_time("Test Driver")
+        # Should be: 28.0 (best S1) + 30.234 (best S2) + 30.210 (best S3) = 88.444
+        expected = 28.0 + 30.234 + 30.210
+        self.assertAlmostEqual(optimal_time, expected, places=3)
+
+    def test_get_optimal_lap_time_nonexistent_driver(self):
+        """Test optimal lap time for non-existent driver"""
+        optimal_time = self.session.get_optimal_lap_time("Nonexistent Driver")
+        self.assertIsNone(optimal_time)
+
+    def test_get_driver_statistics(self):
+        """Test comprehensive driver statistics calculation"""
+        # Create Test Driver laps
+        Lap.objects.create(
+            session=self.session,
+            lap_number=1,
+            driver_name="Test Driver",
+            car_index=0,
+            total_time=90.567,
+            sectors=[30.123, 30.234, 30.210],
+            tyre_compound="M",
+            cuts=0,
+        )
+        Lap.objects.create(
+            session=self.session,
+            lap_number=2,
+            driver_name="Test Driver",
+            car_index=0,
+            total_time=91.0,
+            sectors=[30.0, 30.5, 30.5],
+            tyre_compound="M",
+            cuts=0,
+        )
+        
+        # Add another driver for comparison
+        Lap.objects.create(
+            session=self.session,
+            lap_number=1,
+            driver_name="Driver B",
+            car_index=1,
+            total_time=88.5,
+            sectors=[29.0, 29.5, 30.0],
+            tyre_compound="S",
+            cuts=0,
+        )
+        
+        stats = self.session.get_driver_statistics()
+        
+        # Test structure
+        self.assertIn("Test Driver", stats)
+        self.assertIn("Driver B", stats)
+        
+        # Test Test Driver stats
+        test_driver_stats = stats["Test Driver"]
+        self.assertEqual(test_driver_stats["best_lap_time"], 90.567)
+        self.assertEqual(test_driver_stats["lap_count"], 2)
+        self.assertAlmostEqual(test_driver_stats["avg_lap_time"], 90.7835, places=3)
+        self.assertTrue(test_driver_stats["consistency"] > 0)  # Should have some variance
+        self.assertTrue(test_driver_stats["visible"])
+        
+        # Test Driver B stats
+        driver_b_stats = stats["Driver B"]
+        self.assertEqual(driver_b_stats["best_lap_time"], 88.5)
+        self.assertEqual(driver_b_stats["lap_count"], 1)
+        self.assertEqual(driver_b_stats["avg_lap_time"], 88.5)
+        self.assertEqual(driver_b_stats["consistency"], 0.0)  # Only one lap
+
+    def test_get_driver_statistics_empty_session(self):
+        """Test driver statistics for session with no laps"""
+        empty_session = Session.objects.create(
+            track="Empty Track",
+            car="Empty Car",
+            session_type="Practice",
+            file_name="empty.json",
+        )
+        
+        stats = empty_session.get_driver_statistics()
+        self.assertEqual(stats, {})
+
 
 class LapModelTests(TestCase):
     """Test cases for the Lap model"""
@@ -162,6 +293,20 @@ class LapModelTests(TestCase):
         )
         laps = Lap.objects.all()
         self.assertEqual(list(laps), [self.lap, lap2])
+
+    def test_format_time_static(self):
+        """Test static time formatting method"""
+        # Test normal time
+        self.assertEqual(Lap.format_time_static(90.567), "1:30.567")
+        
+        # Test time over 2 minutes
+        self.assertEqual(Lap.format_time_static(125.123), "2:05.123")
+        
+        # Test time under 1 minute
+        self.assertEqual(Lap.format_time_static(45.789), "0:45.789")
+        
+        # Test None value
+        self.assertEqual(Lap.format_time_static(None), "N/A")
 
 
 class JSONUploadFormTests(TestCase):
@@ -476,11 +621,79 @@ class SessionDetailViewTests(TestCase):
         self.assertIn("fastest_lap", context)
         self.assertIn("sector_count", context)
         self.assertIn("driver_lap_counts", context)
+        self.assertIn("driver_statistics", context)
+        self.assertIn("fastest_lap_time", context)
+        self.assertIn("best_optimal_time", context)
 
         self.assertEqual(context["session"], self.session)
         self.assertEqual(set(context["drivers"]), {"Driver 1", "Driver 2"})
         self.assertEqual(context["driver_lap_counts"]["Driver 1"], 1)
         self.assertEqual(context["driver_lap_counts"]["Driver 2"], 1)
+        
+        # Test purple highlighting context variables
+        self.assertIsNotNone(context["fastest_lap_time"])
+        # best_optimal_time might be None if no sectors data exists
+        self.assertIsNotNone(context["driver_statistics"])
+
+    def test_purple_highlighting_context(self):
+        """Test that purple highlighting context variables are correctly calculated"""
+        # Create a session with drivers having different best lap and optimal times
+        session = Session.objects.create(
+            track="Highlight Test Track",
+            car="Test Car", 
+            session_type="Practice",
+            file_name="test.json"
+        )
+        
+        # Driver A - slower best lap but better optimal due to mixed sectors
+        Lap.objects.create(
+            session=session,
+            lap_number=1,
+            driver_name="Driver A",
+            car_index=0,
+            total_time=61.5,
+            sectors=[20.0, 20.8, 20.7],
+            tyre_compound="M",
+            cuts=0
+        )
+        Lap.objects.create(
+            session=session,
+            lap_number=2,
+            driver_name="Driver A", 
+            car_index=0,
+            total_time=62.0,
+            sectors=[19.0, 21.5, 21.5],  # Best sector 1
+            tyre_compound="M",
+            cuts=0
+        )
+        
+        # Driver B - fastest actual lap
+        Lap.objects.create(
+            session=session,
+            lap_number=1,
+            driver_name="Driver B",
+            car_index=1,
+            total_time=60.0,  # FASTEST LAP
+            sectors=[20.1, 20.5, 20.0],
+            tyre_compound="S", 
+            cuts=0
+        )
+        
+        url = reverse("session_detail", kwargs={"pk": session.pk})
+        response = self.client.get(url)
+        context = response.context
+        
+        # Test that fastest lap time is correctly identified
+        self.assertEqual(context["fastest_lap_time"], 60.0)
+        
+        # Test that best optimal time is correctly calculated
+        # Driver A optimal: 19.0 + 20.8 + 20.7 = 60.5
+        # Driver B optimal: 20.1 + 20.5 + 20.0 = 60.6
+        # So Driver A has the best optimal time (60.5)
+        self.assertAlmostEqual(context["best_optimal_time"], 60.5, places=1)
+        
+        # Clean up
+        session.delete()
 
 
 class SessionEditViewTests(TestCase):
