@@ -40,3 +40,32 @@ def driver_color(index):
         return colors[index % len(colors)]
     except (ValueError, TypeError):
         return "#DB0E15"  # Default to red
+
+
+@register.filter
+def format_laptime(time_seconds):
+    """Format lap time as MM:SS.mmm"""
+    if time_seconds is None:
+        return "N/A"
+    try:
+        time_seconds = float(time_seconds)
+        minutes = int(time_seconds // 60)
+        seconds = time_seconds % 60
+        return f"{minutes}:{seconds:06.3f}"
+    except (ValueError, TypeError):
+        return "N/A"
+
+
+@register.filter
+def time_delta(time1, time2):
+    """Calculate time difference and format as +X.XXXs"""
+    if time1 is None or time2 is None:
+        return ""
+    try:
+        delta = float(time1) - float(time2)
+        if delta > 0:
+            return f"+{delta:.3f}s"
+        else:
+            return f"{delta:.3f}s"
+    except (ValueError, TypeError):
+        return ""
