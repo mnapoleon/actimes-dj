@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Prepare data for chart (includes lap 0 for Race sessions only)
     const chartData = {
-        labels: [{% for lap_number in unique_lap_numbers %}{{ lap_number }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+        labels: [{% for lap_number in unique_lap_numbers %}{{ lap_number|add:1 }}{% if not forloop.last %}, {% endif %}{% endfor %}],
         datasets: [
             {% for driver in drivers %}
             {
