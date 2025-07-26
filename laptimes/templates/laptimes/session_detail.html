@@ -144,7 +144,12 @@
                         
                         <div class="text-center">
                             <small class="text-muted">
-                                Consistency: ±{{ stats.consistency|floatformat:3 }}s
+                                <span data-bs-toggle="tooltip" 
+                                      data-bs-placement="top" 
+                                      title="Standard deviation of lap times. For sessions with 4+ laps, the two worst laps are excluded to better reflect typical performance consistency.">
+                                    Consistency: ±{{ stats.consistency|floatformat:3 }}s
+                                    <i class="bi bi-info-circle"></i>
+                                </span>
                             </small>
                         </div>
                     </div>
@@ -565,6 +570,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     driverFilter.value = currentDriver;
     sortBy.value = currentSort;
+    
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 });
 </script>
 {% endblock %}
