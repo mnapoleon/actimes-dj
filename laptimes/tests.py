@@ -697,6 +697,60 @@ class SessionDetailViewTests(TestCase):
         # Clean up
         session.delete()
 
+    def test_chart_lap_zero_inclusion_by_session_type(self):
+        """Test that lap 0 is included in chart only for Race sessions"""
+        # Create Race session
+        race_session = Session.objects.create(
+            track="Race Track",
+            car="Race Car",
+            session_type="Race",
+            file_name="race.json",
+        )
+
+        # Create Practice session
+        practice_session = Session.objects.create(
+            track="Practice Track",
+            car="Practice Car",
+            session_type="Practice",
+            file_name="practice.json",
+        )
+
+        # Add laps including lap 0 to both sessions
+        for session in [race_session, practice_session]:
+            for lap_num in [0, 1, 2]:  # Include lap 0 (out lap)
+                Lap.objects.create(
+                    session=session,
+                    lap_number=lap_num,
+                    driver_name="Test Driver",
+                    car_index=0,
+                    total_time=60.0 + lap_num,
+                    sectors=[20.0, 20.0, 20.0],
+                    tyre_compound="M",
+                    cuts=0,
+                )
+
+        # Test Race session includes lap 0
+        race_url = reverse("session_detail", kwargs={"pk": race_session.pk})
+        race_response = self.client.get(race_url)
+        race_context = race_response.context
+
+        race_lap_numbers = race_context["unique_lap_numbers"]
+        self.assertIn(0, race_lap_numbers)  # Lap 0 should be included
+        self.assertEqual(race_lap_numbers, [0, 1, 2])
+
+        # Test Practice session excludes lap 0
+        practice_url = reverse("session_detail", kwargs={"pk": practice_session.pk})
+        practice_response = self.client.get(practice_url)
+        practice_context = practice_response.context
+
+        practice_lap_numbers = practice_context["unique_lap_numbers"]
+        self.assertNotIn(0, practice_lap_numbers)  # Lap 0 should be excluded
+        self.assertEqual(practice_lap_numbers, [1, 2])
+
+        # Clean up
+        race_session.delete()
+        practice_session.delete()
+
 
 class SessionEditViewTests(TestCase):
     """Test cases for the session edit view"""
