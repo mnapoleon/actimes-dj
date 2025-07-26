@@ -39,16 +39,16 @@ class Session(models.Model):
         driver_laps = self.laps.filter(driver_name=driver_name)
         if not driver_laps.exists():
             return None
-            
+
         # Get all sector times for this driver
         sector_count = 0
         for lap in driver_laps:
             if lap.sectors and len(lap.sectors) > sector_count:
                 sector_count = len(lap.sectors)
-        
+
         if sector_count == 0:
             return None
-            
+
         # Find best time for each sector
         best_sectors = []
         for sector_idx in range(sector_count):
@@ -56,37 +56,37 @@ class Session(models.Model):
             for lap in driver_laps:
                 if lap.sectors and len(lap.sectors) > sector_idx:
                     sector_times.append(lap.sectors[sector_idx])
-            
+
             if sector_times:
                 best_sectors.append(min(sector_times))
-        
+
         return sum(best_sectors) if best_sectors else None
 
     def get_driver_statistics(self):
         """Calculate comprehensive statistics for each driver"""
         stats = {}
-        
+
         for driver_name in self.get_drivers():
             driver_laps = self.laps.filter(driver_name=driver_name)
             lap_times = [lap.total_time for lap in driver_laps]
-            
+
             if not lap_times:
                 continue
-                
+
             # Calculate basic statistics
             best_lap_time = min(lap_times)
             avg_lap_time = sum(lap_times) / len(lap_times)
-            
+
             # Calculate consistency (standard deviation)
             if len(lap_times) > 1:
                 variance = sum((x - avg_lap_time) ** 2 for x in lap_times) / len(lap_times)
                 consistency = variance ** 0.5
             else:
                 consistency = 0.0
-            
+
             # Get optimal lap time
             optimal_lap_time = self.get_optimal_lap_time(driver_name)
-            
+
             stats[driver_name] = {
                 'best_lap_time': best_lap_time,
                 'optimal_lap_time': optimal_lap_time,
@@ -95,7 +95,7 @@ class Session(models.Model):
                 'consistency': consistency,
                 'visible': True  # Default visibility state
             }
-            
+
         return stats
 
 

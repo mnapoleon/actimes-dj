@@ -73,7 +73,7 @@ class SessionModelTests(TestCase):
 
     def test_get_fastest_lap(self):
         """Test getting the fastest lap in session"""
-        lap1 = Lap.objects.create(
+        Lap.objects.create(
             session=self.session,
             lap_number=1,
             driver_name="Driver 1",
@@ -113,7 +113,7 @@ class SessionModelTests(TestCase):
             tyre_compound="S",
             cuts=0,
         )
-        
+
         optimal_time = self.session.get_optimal_lap_time("Test Driver")
         # Should be sum of best sectors: 29.5 + 29.8 + 29.7 = 89.0
         self.assertAlmostEqual(optimal_time, 89.0, places=3)
@@ -141,7 +141,7 @@ class SessionModelTests(TestCase):
             tyre_compound="S",
             cuts=0,
         )
-        
+
         optimal_time = self.session.get_optimal_lap_time("Test Driver")
         # Should be: 28.0 (best S1) + 30.234 (best S2) + 30.210 (best S3) = 88.444
         expected = 28.0 + 30.234 + 30.210
@@ -175,7 +175,7 @@ class SessionModelTests(TestCase):
             tyre_compound="M",
             cuts=0,
         )
-        
+
         # Add another driver for comparison
         Lap.objects.create(
             session=self.session,
@@ -187,13 +187,13 @@ class SessionModelTests(TestCase):
             tyre_compound="S",
             cuts=0,
         )
-        
+
         stats = self.session.get_driver_statistics()
-        
+
         # Test structure
         self.assertIn("Test Driver", stats)
         self.assertIn("Driver B", stats)
-        
+
         # Test Test Driver stats
         test_driver_stats = stats["Test Driver"]
         self.assertEqual(test_driver_stats["best_lap_time"], 90.567)
@@ -201,7 +201,7 @@ class SessionModelTests(TestCase):
         self.assertAlmostEqual(test_driver_stats["avg_lap_time"], 90.7835, places=3)
         self.assertTrue(test_driver_stats["consistency"] > 0)  # Should have some variance
         self.assertTrue(test_driver_stats["visible"])
-        
+
         # Test Driver B stats
         driver_b_stats = stats["Driver B"]
         self.assertEqual(driver_b_stats["best_lap_time"], 88.5)
@@ -217,7 +217,7 @@ class SessionModelTests(TestCase):
             session_type="Practice",
             file_name="empty.json",
         )
-        
+
         stats = empty_session.get_driver_statistics()
         self.assertEqual(stats, {})
 
@@ -298,13 +298,13 @@ class LapModelTests(TestCase):
         """Test static time formatting method"""
         # Test normal time
         self.assertEqual(Lap.format_time_static(90.567), "1:30.567")
-        
+
         # Test time over 2 minutes
         self.assertEqual(Lap.format_time_static(125.123), "2:05.123")
-        
+
         # Test time under 1 minute
         self.assertEqual(Lap.format_time_static(45.789), "0:45.789")
-        
+
         # Test None value
         self.assertEqual(Lap.format_time_static(None), "N/A")
 
@@ -470,7 +470,7 @@ class HomeViewTests(TestCase):
 
     def test_home_view_displays_sessions(self):
         """Test that recent sessions are displayed"""
-        session = Session.objects.create(
+        Session.objects.create(
             track="Test Track",
             car="Test Car",
             session_type="Practice",
@@ -629,7 +629,7 @@ class SessionDetailViewTests(TestCase):
         self.assertEqual(set(context["drivers"]), {"Driver 1", "Driver 2"})
         self.assertEqual(context["driver_lap_counts"]["Driver 1"], 1)
         self.assertEqual(context["driver_lap_counts"]["Driver 2"], 1)
-        
+
         # Test purple highlighting context variables
         self.assertIsNotNone(context["fastest_lap_time"])
         # best_optimal_time might be None if no sectors data exists
@@ -640,11 +640,11 @@ class SessionDetailViewTests(TestCase):
         # Create a session with drivers having different best lap and optimal times
         session = Session.objects.create(
             track="Highlight Test Track",
-            car="Test Car", 
+            car="Test Car",
             session_type="Practice",
             file_name="test.json"
         )
-        
+
         # Driver A - slower best lap but better optimal due to mixed sectors
         Lap.objects.create(
             session=session,
@@ -659,14 +659,14 @@ class SessionDetailViewTests(TestCase):
         Lap.objects.create(
             session=session,
             lap_number=2,
-            driver_name="Driver A", 
+            driver_name="Driver A",
             car_index=0,
             total_time=62.0,
             sectors=[19.0, 21.5, 21.5],  # Best sector 1
             tyre_compound="M",
             cuts=0
         )
-        
+
         # Driver B - fastest actual lap
         Lap.objects.create(
             session=session,
@@ -675,23 +675,23 @@ class SessionDetailViewTests(TestCase):
             car_index=1,
             total_time=60.0,  # FASTEST LAP
             sectors=[20.1, 20.5, 20.0],
-            tyre_compound="S", 
+            tyre_compound="S",
             cuts=0
         )
-        
+
         url = reverse("session_detail", kwargs={"pk": session.pk})
         response = self.client.get(url)
         context = response.context
-        
+
         # Test that fastest lap time is correctly identified
         self.assertEqual(context["fastest_lap_time"], 60.0)
-        
+
         # Test that best optimal time is correctly calculated
         # Driver A optimal: 19.0 + 20.8 + 20.7 = 60.5
         # Driver B optimal: 20.1 + 20.5 + 20.0 = 60.6
         # So Driver A has the best optimal time (60.5)
         self.assertAlmostEqual(context["best_optimal_time"], 60.5, places=1)
-        
+
         # Clean up
         session.delete()
 
@@ -1049,7 +1049,7 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        response2 = self.client.post(reverse("home"), {"json_file": uploaded_file2})
+        self.client.post(reverse("home"), {"json_file": uploaded_file2})
 
         # Should only have one session
         self.assertEqual(Session.objects.count(), 1)
@@ -1233,8 +1233,6 @@ class AdminInterfaceTests(TestCase):
     """Test cases for admin interface enhancements"""
 
     def setUp(self):
-        from django.contrib.auth.models import User
-
         self.admin_user = User.objects.create_superuser(
             username="admin", email="admin@test.com", password="testpass123"
         )
