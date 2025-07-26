@@ -1,8 +1,6 @@
 import json
-import tempfile
 
 from django.contrib.auth.models import User
-from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -697,8 +695,8 @@ class SessionDetailViewTests(TestCase):
         # Clean up
         session.delete()
 
-    def test_chart_lap_zero_inclusion_by_session_type(self):
-        """Test that lap 0 is included in chart only for Race sessions"""
+    def test_chart_lap_zero_inclusion_all_sessions(self):
+        """Test that lap 0 is included in chart for all session types"""
         # Create Race session
         race_session = Session.objects.create(
             track="Race Track",
@@ -738,14 +736,14 @@ class SessionDetailViewTests(TestCase):
         self.assertIn(0, race_lap_numbers)  # Lap 0 should be included
         self.assertEqual(race_lap_numbers, [0, 1, 2])
 
-        # Test Practice session excludes lap 0
+        # Test Practice session now also includes lap 0
         practice_url = reverse("session_detail", kwargs={"pk": practice_session.pk})
         practice_response = self.client.get(practice_url)
         practice_context = practice_response.context
 
         practice_lap_numbers = practice_context["unique_lap_numbers"]
-        self.assertNotIn(0, practice_lap_numbers)  # Lap 0 should be excluded
-        self.assertEqual(practice_lap_numbers, [1, 2])
+        self.assertIn(0, practice_lap_numbers)  # Lap 0 should now be included
+        self.assertEqual(practice_lap_numbers, [0, 1, 2])
 
         # Clean up
         race_session.delete()

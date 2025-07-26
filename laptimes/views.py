@@ -1,7 +1,6 @@
 import json
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -225,13 +224,8 @@ class SessionDetailView(ListView):
                 context["best_optimal_time"] = None
 
         # Get unique lap numbers for chart labels
-        # Include lap 0 (out lap) only for Race sessions
-        if self.session.session_type == "Race":
-            # Include all laps starting from 0 for races
-            lap_filter = all_laps
-        else:
-            # Exclude lap 0 for Practice/Qualifying sessions
-            lap_filter = all_laps.filter(lap_number__gt=0)
+        # Include all laps (including lap 0) for all session types
+        lap_filter = all_laps
 
         unique_lap_numbers = list(
             lap_filter.values_list("lap_number", flat=True)
