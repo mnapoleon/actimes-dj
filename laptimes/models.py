@@ -77,8 +77,18 @@ class Session(models.Model):
             best_lap_time = min(lap_times)
             avg_lap_time = sum(lap_times) / len(lap_times)
 
-            # Calculate consistency (standard deviation)
-            if len(lap_times) > 1:
+            # Calculate consistency (standard deviation) - drop two worst laps
+            if len(lap_times) > 3:
+                # Sort lap times and drop the two worst (highest) times
+                sorted_times = sorted(lap_times)
+                filtered_times = sorted_times[:-2]  # Remove two worst laps
+                filtered_avg = sum(filtered_times) / len(filtered_times)
+                variance = sum((x - filtered_avg) ** 2 for x in filtered_times) / len(
+                    filtered_times
+                )
+                consistency = variance**0.5
+            elif len(lap_times) > 1:
+                # If 3 or fewer laps, use all laps for consistency
                 variance = sum((x - avg_lap_time) ** 2 for x in lap_times) / len(
                     lap_times
                 )
