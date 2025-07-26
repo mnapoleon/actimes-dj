@@ -79,8 +79,10 @@ class Session(models.Model):
 
             # Calculate consistency (standard deviation)
             if len(lap_times) > 1:
-                variance = sum((x - avg_lap_time) ** 2 for x in lap_times) / len(lap_times)
-                consistency = variance ** 0.5
+                variance = sum((x - avg_lap_time) ** 2 for x in lap_times) / len(
+                    lap_times
+                )
+                consistency = variance**0.5
             else:
                 consistency = 0.0
 
@@ -88,12 +90,12 @@ class Session(models.Model):
             optimal_lap_time = self.get_optimal_lap_time(driver_name)
 
             stats[driver_name] = {
-                'best_lap_time': best_lap_time,
-                'optimal_lap_time': optimal_lap_time,
-                'lap_count': len(lap_times),
-                'avg_lap_time': avg_lap_time,
-                'consistency': consistency,
-                'visible': True  # Default visibility state
+                "best_lap_time": best_lap_time,
+                "optimal_lap_time": optimal_lap_time,
+                "lap_count": len(lap_times),
+                "avg_lap_time": avg_lap_time,
+                "consistency": consistency,
+                "visible": True,  # Default visibility state
             }
 
         return stats

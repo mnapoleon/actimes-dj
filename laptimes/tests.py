@@ -199,7 +199,9 @@ class SessionModelTests(TestCase):
         self.assertEqual(test_driver_stats["best_lap_time"], 90.567)
         self.assertEqual(test_driver_stats["lap_count"], 2)
         self.assertAlmostEqual(test_driver_stats["avg_lap_time"], 90.7835, places=3)
-        self.assertTrue(test_driver_stats["consistency"] > 0)  # Should have some variance
+        self.assertTrue(
+            test_driver_stats["consistency"] > 0
+        )  # Should have some variance
         self.assertTrue(test_driver_stats["visible"])
 
         # Test Driver B stats
@@ -642,7 +644,7 @@ class SessionDetailViewTests(TestCase):
             track="Highlight Test Track",
             car="Test Car",
             session_type="Practice",
-            file_name="test.json"
+            file_name="test.json",
         )
 
         # Driver A - slower best lap but better optimal due to mixed sectors
@@ -654,7 +656,7 @@ class SessionDetailViewTests(TestCase):
             total_time=61.5,
             sectors=[20.0, 20.8, 20.7],
             tyre_compound="M",
-            cuts=0
+            cuts=0,
         )
         Lap.objects.create(
             session=session,
@@ -664,7 +666,7 @@ class SessionDetailViewTests(TestCase):
             total_time=62.0,
             sectors=[19.0, 21.5, 21.5],  # Best sector 1
             tyre_compound="M",
-            cuts=0
+            cuts=0,
         )
 
         # Driver B - fastest actual lap
@@ -676,7 +678,7 @@ class SessionDetailViewTests(TestCase):
             total_time=60.0,  # FASTEST LAP
             sectors=[20.1, 20.5, 20.0],
             tyre_compound="S",
-            cuts=0
+            cuts=0,
         )
 
         url = reverse("session_detail", kwargs={"pk": session.pk})

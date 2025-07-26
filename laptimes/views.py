@@ -207,12 +207,17 @@ class SessionDetailView(ListView):
         # Calculate fastest lap and best optimal lap across all drivers for highlighting
         if driver_stats:
             # Find fastest lap time across all drivers
-            fastest_lap_time = min(stats["best_lap_time"] for stats in driver_stats.values())
+            fastest_lap_time = min(
+                stats["best_lap_time"] for stats in driver_stats.values()
+            )
             context["fastest_lap_time"] = fastest_lap_time
 
             # Find best optimal lap time across all drivers (excluding None values)
-            optimal_times = [stats["optimal_lap_time"] for stats in driver_stats.values()
-                             if stats["optimal_lap_time"] is not None]
+            optimal_times = [
+                stats["optimal_lap_time"]
+                for stats in driver_stats.values()
+                if stats["optimal_lap_time"] is not None
+            ]
             if optimal_times:
                 best_optimal_time = min(optimal_times)
                 context["best_optimal_time"] = best_optimal_time
