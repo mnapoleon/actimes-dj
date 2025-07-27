@@ -19,6 +19,9 @@ class Session(models.Model):
         ordering = ["-upload_date"]
         indexes = [
             models.Index(fields=["file_hash"]),
+            models.Index(fields=["-upload_date"]),  # For pagination ordering
+            models.Index(fields=["track"]),  # For filtering/searching by track
+            models.Index(fields=["car"]),  # For filtering/searching by car
         ]
 
     def __str__(self):

@@ -1,13 +1,13 @@
 import json
 
 from django.contrib import messages
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import (
     DeleteView,
-    FormView,
     ListView,
     TemplateView,
     UpdateView,
@@ -17,64 +17,53 @@ from .forms import JSONUploadForm, SessionEditForm
 from .models import Lap, Session
 
 
-class HomeView(FormView):
-    """Main view for uploading JSON files and displaying sessions"""
+class HomeView(ListView):
+    """Main view for uploading JSON files and displaying sessions with pagination"""
 
+    model = Session
     template_name = "laptimes/home.html"
-    form_class = JSONUploadForm
-    success_url = reverse_lazy("home")
+    context_object_name = "sessions"
+    paginate_by = 20
+    ordering = ["-upload_date"]
+
+    def get_queryset(self):
+        """Optimize queries with annotations for better performance"""
+        return Session.objects.annotate(lap_count=Count("laps")).order_by(
+            "-upload_date"
+        )
+
+    def get_paginate_by(self, queryset):
+        """Allow dynamic pagination based on URL parameter"""
+        per_page = self.request.GET.get("per_page")
+        if per_page in ["10", "20", "50", "100"]:
+            return int(per_page)
+        return self.paginate_by
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["sessions"] = Session.objects.all().order_by("track")[
-            :10
-        ]  # Latest 10 sessions sorted by track
+        context["form"] = JSONUploadForm()
+
+        # Add current per_page value for the selector
+        context["current_per_page"] = self.get_paginate_by(self.get_queryset())
+
+        # Add per_page options
+        context["per_page_options"] = [10, 20, 50, 100]
+
         return context
 
-    def _extract_session_type(self, data, session_data):
-        """Extract session type from __quickDrive or fallback to type field"""
-        session_type = "Practice"  # Default
+    def post(self, request, *args, **kwargs):
+        """Handle file upload while maintaining pagination"""
+        form = JSONUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            return self._process_upload(form)
+        else:
+            # Form has errors, redisplay with errors
+            self.object_list = self.get_queryset()
+            context = self.get_context_data(**kwargs)
+            context["form"] = form
+            return self.render_to_response(context)
 
-        # First try to extract from __quickDrive
-        if "__quickDrive" in data:
-            session_type = self._parse_quick_drive_mode(data["__quickDrive"])
-
-        # Fall back to type field if __quickDrive parsing didn't work
-        if session_type == "Practice" and "type" in session_data:
-            # Map session type numbers to names
-            type_map = {1: "Practice", 2: "Qualifying", 3: "Race"}
-            session_type = type_map.get(session_data["type"], "Practice")
-
-        return session_type
-
-    def _parse_quick_drive_mode(self, quick_drive_str):
-        """Parse the __quickDrive JSON string to extract mode"""
-        try:
-            quick_drive_data = json.loads(quick_drive_str)
-            if "Mode" not in quick_drive_data:
-                return "Practice"
-
-            mode_path = quick_drive_data["Mode"]
-            # Extract last node from path like
-            # "/Pages/Drive/QuickDrive_Trackday.xaml"
-            if "/" not in mode_path:
-                return "Practice"
-
-            # Get "QuickDrive_Trackday.xaml"
-            last_part = mode_path.split("/")[-1]
-            if last_part.endswith(".xaml"):
-                last_part = last_part[:-5]  # Remove ".xaml"
-
-            if last_part.startswith("QuickDrive_"):
-                # Remove "QuickDrive_" prefix
-                return last_part[11:]
-            else:
-                return last_part
-
-        except (json.JSONDecodeError, KeyError):
-            return "Practice"
-
-    def form_valid(self, form):
+    def _process_upload(self, form):
         """Process uploaded JSON file and create Session/Lap objects"""
         json_file = form.cleaned_data["json_file"]
         try:
@@ -137,7 +126,50 @@ class HomeView(FormView):
         except Exception as e:
             messages.error(self.request, f"Error processing file: {str(e)}")
 
-        return super().form_valid(form)
+        return redirect("home")
+
+    def _extract_session_type(self, data, session_data):
+        """Extract session type from __quickDrive or fallback to type field"""
+        session_type = "Practice"  # Default
+
+        # First try to extract from __quickDrive
+        if "__quickDrive" in data:
+            session_type = self._parse_quick_drive_mode(data["__quickDrive"])
+
+        # Fall back to type field if __quickDrive parsing didn't work
+        if session_type == "Practice" and "type" in session_data:
+            # Map session type numbers to names
+            type_map = {1: "Practice", 2: "Qualifying", 3: "Race"}
+            session_type = type_map.get(session_data["type"], "Practice")
+
+        return session_type
+
+    def _parse_quick_drive_mode(self, quick_drive_str):
+        """Parse the __quickDrive JSON string to extract mode"""
+        try:
+            quick_drive_data = json.loads(quick_drive_str)
+            if "Mode" not in quick_drive_data:
+                return "Practice"
+
+            mode_path = quick_drive_data["Mode"]
+            # Extract last node from path like
+            # "/Pages/Drive/QuickDrive_Trackday.xaml"
+            if "/" not in mode_path:
+                return "Practice"
+
+            # Get "QuickDrive_Trackday.xaml"
+            last_part = mode_path.split("/")[-1]
+            if last_part.endswith(".xaml"):
+                last_part = last_part[:-5]  # Remove ".xaml"
+
+            if last_part.startswith("QuickDrive_"):
+                # Remove "QuickDrive_" prefix
+                return last_part[11:]
+            else:
+                return last_part
+
+        except (json.JSONDecodeError, KeyError):
+            return "Practice"
 
 
 class SessionDetailView(ListView):
