@@ -5,17 +5,19 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  # Quick validation for PRs
+  pr-validation:
     runs-on: ubuntu-latest
+    name: "PR Validation"
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
+    - name: Set up Python 3.13
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.13'
 
     - name: Install dependencies
       run: |
@@ -34,23 +36,134 @@ jobs:
       run: |
         python manage.py migrate
 
+    - name: Verify test structure
+      run: |
+        echo "🔍 Verifying modular test structure..."
+        python -c "
+        import os
+        expected_modules = ['test_models.py', 'test_views.py', 'test_forms.py', 'test_api.py', 'test_admin.py', 'test_integration.py', 'test_file_management.py']
+        actual_modules = [f for f in os.listdir('laptimes/tests') if f.startswith('test_') and f.endswith('.py')]
+        print(f'Expected modules: {expected_modules}')
+        print(f'Found modules: {actual_modules}')
+        missing = set(expected_modules) - set(actual_modules)
+        extra = set(actual_modules) - set(expected_modules)
+        if missing:
+            print(f'❌ Missing modules: {missing}')
+            exit(1)
+        if extra:
+            print(f'⚠️  Extra modules found: {extra}')
+        print('✅ Test structure validation passed')
+        "
+
     - name: Run all tests
       run: |
-        python manage.py test --verbosity=2
+        echo "🚀 Running complete test suite..."
+        python manage.py test laptimes.tests --verbosity=2
 
-    - name: Test count verification
+    - name: Validate test count and breakdown
       run: |
-        echo "Verifying test count..."
-        TEST_COUNT=$(python manage.py test --verbosity=0 2>&1 | grep -o "Ran [0-9]* test" | grep -o "[0-9]*")
-        echo "Total tests run: $TEST_COUNT"
-        if [ "$TEST_COUNT" -lt 50 ]; then
-          echo "Warning: Expected at least 50 tests, but only $TEST_COUNT were run"
+        echo "📊 Validating test count and module breakdown..."
+        
+        # Check total test count
+        TOTAL_TESTS=$(python manage.py test laptimes.tests --verbosity=0 2>&1 | grep -o "Ran [0-9]* test" | grep -o "[0-9]*")
+        echo "Total tests: $TOTAL_TESTS"
+        
+        if [ "$TOTAL_TESTS" -ne 60 ]; then
+          echo "❌ Expected exactly 60 tests, but found $TOTAL_TESTS"
           exit 1
         fi
-        echo "✅ Test count verification passed: $TEST_COUNT tests"
+        
+        # Test each module individually to verify structure
+        echo "📋 Testing individual modules:"
+        
+        # Models (18 tests)
+        MODELS_COUNT=$(python manage.py test laptimes.tests.test_models --verbosity=0 2>&1 | grep -o "Ran [0-9]* test" | grep -o "[0-9]*")
+        echo "  Models: $MODELS_COUNT tests"
+        
+        # Views (14 tests)  
+        VIEWS_COUNT=$(python manage.py test laptimes.tests.test_views --verbosity=0 2>&1 | grep -o "Ran [0-9]* test" | grep -o "[0-9]*")
+        echo "  Views: $VIEWS_COUNT tests"
+        
+        # Forms (6 tests)
+        FORMS_COUNT=$(python manage.py test laptimes.tests.test_forms --verbosity=0 2>&1 | grep -o "Ran [0-9]* test" | grep -o "[0-9]*")
+        echo "  Forms: $FORMS_COUNT tests"
+        
+        # API (1 test)
+        API_COUNT=$(python manage.py test laptimes.tests.test_api --verbosity=0 2>&1 | grep -o "Ran [0-9]* test" | grep -o "[0-9]*")
+        echo "  API: $API_COUNT tests"
+        
+        # Admin (5 tests)
+        ADMIN_COUNT=$(python manage.py test laptimes.tests.test_admin --verbosity=0 2>&1 | grep -o "Ran [0-9]* test" | grep -o "[0-9]*")
+        echo "  Admin: $ADMIN_COUNT tests"
+        
+        # Integration (1 test)
+        INTEGRATION_COUNT=$(python manage.py test laptimes.tests.test_integration --verbosity=0 2>&1 | grep -o "Ran [0-9]* test" | grep -o "[0-9]*")
+        echo "  Integration: $INTEGRATION_COUNT tests"
+        
+        # File Management (15 tests)
+        FILE_MGMT_COUNT=$(python manage.py test laptimes.tests.test_file_management --verbosity=0 2>&1 | grep -o "Ran [0-9]* test" | grep -o "[0-9]*")
+        echo "  File Management: $FILE_MGMT_COUNT tests"
+        
+        # Verify breakdown adds up
+        CALCULATED_TOTAL=$((MODELS_COUNT + VIEWS_COUNT + FORMS_COUNT + API_COUNT + ADMIN_COUNT + INTEGRATION_COUNT + FILE_MGMT_COUNT))
+        echo "Calculated total: $CALCULATED_TOTAL"
+        
+        if [ "$CALCULATED_TOTAL" -ne "$TOTAL_TESTS" ]; then
+          echo "❌ Test count mismatch: individual modules sum to $CALCULATED_TOTAL but total is $TOTAL_TESTS"
+          exit 1
+        fi
+        
+        echo "✅ All test validations passed!"
 
-    - name: Run duplicate file prevention tests specifically
+    - name: Test critical functionality
       run: |
-        echo "Testing duplicate file prevention functionality..."
-        python manage.py test laptimes.tests.DuplicateFileTests --verbosity=2
-        python manage.py test laptimes.tests.AdminInterfaceTests --verbosity=2
+        echo "🔧 Testing critical functionality modules..."
+        
+        # Test file upload and duplicate prevention (most complex functionality)
+        echo "Testing file management..."
+        python manage.py test laptimes.tests.test_file_management.DuplicateFileTests --verbosity=2
+        
+        # Test model statistics (core business logic)
+        echo "Testing model statistics..."
+        python manage.py test laptimes.tests.test_models.SessionModelTests.test_get_driver_statistics --verbosity=2
+        
+        # Test admin interface (important for production)
+        echo "Testing admin interface..."
+        python manage.py test laptimes.tests.test_admin --verbosity=2
+        
+        echo "✅ Critical functionality tests passed!"
+
+  # Matrix test for multiple Python versions (optional, runs in parallel)
+  compatibility:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    name: "Python ${{ matrix.python-version }} Compatibility"
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run migrations
+      run: |
+        python manage.py migrate
+
+    - name: Test core functionality only
+      run: |
+        echo "🐍 Testing core functionality on Python ${{ matrix.python-version }}..."
+        # Run a subset of critical tests for faster feedback
+        python manage.py test laptimes.tests.test_models --verbosity=1
+        python manage.py test laptimes.tests.test_forms --verbosity=1
+        python manage.py test laptimes.tests.test_api --verbosity=1
+        echo "✅ Core tests passed on Python ${{ matrix.python-version }}"
