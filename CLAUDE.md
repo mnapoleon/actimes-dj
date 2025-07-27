@@ -22,8 +22,17 @@ python manage.py migrate
 
 ### Testing
 ```bash
-# Run all tests (38 tests total)
+# Run all tests (60 tests total)
 python manage.py test
+
+# Run tests by category
+python manage.py test laptimes.tests.test_models     # Model functionality
+python manage.py test laptimes.tests.test_views      # View logic
+python manage.py test laptimes.tests.test_forms      # Form validation
+python manage.py test laptimes.tests.test_api        # API endpoints
+python manage.py test laptimes.tests.test_admin      # Admin interface
+python manage.py test laptimes.tests.test_integration # End-to-end workflows
+python manage.py test laptimes.tests.test_file_management # File operations
 
 # Run with detailed output
 python manage.py test --verbosity=2
@@ -32,10 +41,10 @@ python manage.py test --verbosity=2
 python manage.py test laptimes
 
 # Run specific test class
-python manage.py test laptimes.tests.SessionModelTests
+python manage.py test laptimes.tests.test_models.SessionModelTests
 
 # Run specific test method
-python manage.py test laptimes.tests.SessionModelTests.test_session_creation
+python manage.py test laptimes.tests.test_models.SessionModelTests.test_session_creation
 
 # Keep test database for debugging
 python manage.py test --keepdb
@@ -63,13 +72,14 @@ coverage html
 ```
 
 **Test Suite Coverage:**
-- 38 comprehensive tests covering models, views, forms, and integration
-- Model tests: Session and Lap creation, validation, methods
-- View tests: All major views including upload, detail, edit, delete
-- Form tests: JSON upload validation and session editing
-- Integration tests: Complete workflow from upload to viewing
-- API tests: JSON endpoint functionality
-- Driver management: Deletion and filtering features
+- 60 comprehensive tests organized into logical modules
+- **Models** (18 tests): Session and Lap creation, validation, methods, statistics
+- **Views** (14 tests): HTTP responses, context data, pagination, view logic
+- **Forms** (6 tests): Upload validation, session editing, form validation
+- **API** (1 test): JSON endpoints and data serialization
+- **Admin** (5 tests): Django admin interface customization
+- **Integration** (1 test): Complete user workflows
+- **File Management** (15 tests): Upload, duplicate detection, driver management
 
 ### Admin Access
 - URL: http://127.0.0.1:8000/admin/
