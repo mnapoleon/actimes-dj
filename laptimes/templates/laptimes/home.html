@@ -1,7 +1,38 @@
 {% extends 'laptimes/base.html' %}
 
 {% block content %}
-<h2 class="mb-3">Recent Sessions</h2>
+<!-- Session count info and controls -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h2 class="mb-0">
+        Sessions 
+        {% if paginator %}
+            <small class="text-muted">({{ paginator.count }} total)</small>
+        {% endif %}
+    </h2>
+    
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+        <!-- Per page selector -->
+        <div class="d-flex align-items-center">
+            <label for="perPageSelect" class="form-label me-2 mb-0 text-nowrap">Show:</label>
+            <select id="perPageSelect" class="form-select form-select-sm" style="width: auto;">
+                {% for option in per_page_options %}
+                    <option value="{{ option }}" {% if option == current_per_page %}selected{% endif %}>
+                        {{ option }}
+                    </option>
+                {% endfor %}
+            </select>
+            <span class="text-muted ms-2 text-nowrap">per page</span>
+        </div>
+        
+        <!-- Current page info -->
+        {% if is_paginated %}
+            <small class="text-muted text-nowrap">
+                Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ paginator.count }}
+            </small>
+        {% endif %}
+    </div>
+</div>
+
 {% if sessions %}
   <div class="table-responsive mb-4">
     <table class="table table-striped align-middle">
@@ -13,6 +44,7 @@
           <th>Fastest Lap</th>
           <th>Driver</th>
           <th>Laps</th>
+          <th>Upload Date</th>
           <th class="text-end">Actions</th>
         </tr>
       </thead>
@@ -41,7 +73,12 @@
                 <span class="text-muted">—</span>
               {% endif %}
             </td>
-            <td>{{ session.laps.count }}</td>
+            <td>{{ session.lap_count }}</td>
+            <td>
+              <small class="text-muted">{{ session.upload_date|date:"M j, Y" }}</small>
+              <br>
+              <small class="text-muted">{{ session.upload_date|time:"g:i A" }}</small>
+            </td>
             <td class="text-end">
               <div class="btn-group btn-group-sm">
                 <a href="{% url 'session_detail' session.pk %}" class="btn btn-outline-primary btn-sm" title="View">
@@ -61,6 +98,71 @@
       </tbody>
     </table>
   </div>
+
+  <!-- Pagination controls -->
+  {% if is_paginated %}
+  <nav aria-label="Session pagination" class="mb-4">
+    <ul class="pagination justify-content-center">
+      <!-- First page -->
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page=1&per_page={{ current_per_page }}" aria-label="First">
+            <span aria-hidden="true">&laquo;&laquo;</span>
+          </a>
+        </li>
+      {% endif %}
+      
+      <!-- Previous page -->
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&per_page={{ current_per_page }}" aria-label="Previous">
+            <span aria-hidden="true">&laquo;</span>
+          </a>
+        </li>
+      {% else %}
+        <li class="page-item disabled">
+          <span class="page-link" aria-hidden="true">&laquo;</span>
+        </li>
+      {% endif %}
+
+      <!-- Page numbers -->
+      {% for num in paginator.page_range %}
+        {% if page_obj.number == num %}
+          <li class="page-item active" aria-current="page">
+            <span class="page-link">{{ num }}</span>
+          </li>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&per_page={{ current_per_page }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      <!-- Next page -->
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&per_page={{ current_per_page }}" aria-label="Next">
+            <span aria-hidden="true">&raquo;</span>
+          </a>
+        </li>
+      {% else %}
+        <li class="page-item disabled">
+          <span class="page-link" aria-hidden="true">&raquo;</span>
+        </li>
+      {% endif %}
+
+      <!-- Last page -->
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ paginator.num_pages }}&per_page={{ current_per_page }}" aria-label="Last">
+            <span aria-hidden="true">&raquo;&raquo;</span>
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
 {% else %}
   <p class="text-muted">No sessions uploaded yet.</p>
 {% endif %}
@@ -104,4 +206,15 @@
     </form>
   </div>
 </div>
+
+<script>
+// Handle per-page selector change
+document.getElementById('perPageSelect').addEventListener('change', function() {
+    const perPage = this.value;
+    const url = new URL(window.location);
+    url.searchParams.set('per_page', perPage);
+    url.searchParams.delete('page'); // Reset to page 1 when changing per_page
+    window.location.href = url.toString();
+});
+</script>
 {% endblock %}
