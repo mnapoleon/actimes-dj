@@ -8,7 +8,6 @@ from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import (
     DeleteView,
-    FormView,
     ListView,
     TemplateView,
     UpdateView,
@@ -29,27 +28,27 @@ class HomeView(ListView):
 
     def get_queryset(self):
         """Optimize queries with annotations for better performance"""
-        return Session.objects.annotate(
-            lap_count=Count('laps')
-        ).order_by('-upload_date')
+        return Session.objects.annotate(lap_count=Count("laps")).order_by(
+            "-upload_date"
+        )
 
     def get_paginate_by(self, queryset):
         """Allow dynamic pagination based on URL parameter"""
-        per_page = self.request.GET.get('per_page')
-        if per_page in ['10', '20', '50', '100']:
+        per_page = self.request.GET.get("per_page")
+        if per_page in ["10", "20", "50", "100"]:
             return int(per_page)
         return self.paginate_by
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["form"] = JSONUploadForm()
-        
+
         # Add current per_page value for the selector
         context["current_per_page"] = self.get_paginate_by(self.get_queryset())
-        
+
         # Add per_page options
         context["per_page_options"] = [10, 20, 50, 100]
-        
+
         return context
 
     def post(self, request, *args, **kwargs):
