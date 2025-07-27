@@ -1,12 +1,13 @@
 """Tests for file management and duplicate detection functionality."""
 
 import json
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
-from ..models import Lap, Session
+
 from ..forms import JSONUploadForm
-from .base import BaseTestCase
+from ..models import Lap, Session
 
 
 class DriverDeletionTests(TestCase):

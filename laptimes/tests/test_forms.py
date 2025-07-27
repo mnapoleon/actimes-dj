@@ -1,9 +1,10 @@
 """Tests for the laptimes forms."""
 
 import json
+
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
 from django.utils import timezone
+
 from ..forms import JSONUploadForm, SessionEditForm
 from ..models import Session
 from .base import BaseTestCase, FormTestMixin
@@ -149,4 +150,6 @@ class SessionEditFormTests(BaseTestCase, FormTestMixin):
             "upload_date": timezone.now().strftime("%Y-%m-%dT%H:%M"),
         }
         form = SessionEditForm(data=form_data, instance=self.session)
-        self.assertFormInvalid(form, {"track_select": ["Please select or enter a track name."]})
+        self.assertFormInvalid(
+            form, {"track_select": ["Please select or enter a track name."]}
+        )

@@ -2,8 +2,8 @@
 
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
+
 from ..models import Session
-from .base import BaseTestCase
 
 
 class AdminInterfaceTests(TestCase):

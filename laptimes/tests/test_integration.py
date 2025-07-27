@@ -1,11 +1,12 @@
 """Integration tests for the laptimes application."""
 
 import json
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
+
 from ..models import Lap, Session
-from .base import BaseTestCase
 
 
 class IntegrationTests(TestCase):

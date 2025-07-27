@@ -1,10 +1,12 @@
 """Tests for the laptimes views."""
 
 import json
+
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
+
 from ..models import Lap, Session
 from .base import BaseTestCase, ViewTestMixin
 

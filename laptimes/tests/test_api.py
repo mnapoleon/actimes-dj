@@ -1,8 +1,9 @@
 """Tests for the laptimes API endpoints."""
 
-from django.test import Client, TestCase
+from django.test import Client
 from django.urls import reverse
-from ..models import Lap, Session
+
+from ..models import Lap
 from .base import BaseTestCase
 
 

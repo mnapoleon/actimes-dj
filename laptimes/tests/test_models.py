@@ -1,7 +1,6 @@
 """Tests for the laptimes models."""
 
-from django.test import TestCase
-from ..models import Session, Lap
+from ..models import Lap, Session
 from .base import BaseTestCase, ModelTestMixin
 
 
