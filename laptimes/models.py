@@ -22,6 +22,10 @@ class Session(models.Model):
             models.Index(fields=["-upload_date"]),  # For pagination ordering
             models.Index(fields=["track"]),  # For filtering/searching by track
             models.Index(fields=["car"]),  # For filtering/searching by car
+            models.Index(fields=["session_type"]),  # For session type filtering
+            models.Index(fields=["track", "-upload_date"]),  # Compound index for track + date
+            models.Index(fields=["car", "-upload_date"]),    # Compound index for car + date
+            models.Index(fields=["session_type", "-upload_date"]),  # Compound index for session type + date
         ]
 
     def __str__(self):
