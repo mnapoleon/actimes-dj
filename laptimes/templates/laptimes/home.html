@@ -33,6 +33,135 @@
     </div>
 </div>
 
+<!-- Advanced Filter Form -->
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-funnel"></i> Filter Sessions
+                {% if active_filter_count > 0 %}
+                    <span class="badge bg-primary ms-2">{{ active_filter_count }}</span>
+                {% endif %}
+            </h6>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="clearFilters">
+                    <i class="bi bi-x-circle"></i> Clear All
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
+                    <i class="bi bi-chevron-down" id="filterToggleIcon"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="collapse {% if active_filter_count > 0 %}show{% endif %}" id="filterCollapse">
+        <div class="card-body">
+            <form method="get" id="filterForm">
+                <div class="row g-3">
+                    <!-- Search -->
+                    <div class="col-md-6">
+                        <label for="searchInput" class="form-label">Search</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" name="search" id="searchInput" class="form-control" 
+                                   placeholder="Search sessions, tracks, cars, drivers..." 
+                                   value="{{ current_filters.search }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Track Filter -->
+                    <div class="col-md-3">
+                        <label for="trackSelect" class="form-label">Track</label>
+                        <select name="track" id="trackSelect" class="form-select">
+                            <option value="all" {% if current_filters.track == 'all' %}selected{% endif %}>All Tracks</option>
+                            {% for track in tracks %}
+                                <option value="{{ track }}" {% if track == current_filters.track %}selected{% endif %}>
+                                    {{ track }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Car Filter -->
+                    <div class="col-md-3">
+                        <label for="carSelect" class="form-label">Car</label>
+                        <select name="car" id="carSelect" class="form-select">
+                            <option value="all" {% if current_filters.car == 'all' %}selected{% endif %}>All Cars</option>
+                            {% for car in cars %}
+                                <option value="{{ car }}" {% if car == current_filters.car %}selected{% endif %}>
+                                    {{ car }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Session Type Filter -->
+                    <div class="col-md-3">
+                        <label for="sessionTypeSelect" class="form-label">Session Type</label>
+                        <select name="session_type" id="sessionTypeSelect" class="form-select">
+                            <option value="all" {% if current_filters.session_type == 'all' %}selected{% endif %}>All Types</option>
+                            {% for type in session_types %}
+                                <option value="{{ type }}" {% if type == current_filters.session_type %}selected{% endif %}>
+                                    {{ type }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Date Range -->
+                    <div class="col-md-4">
+                        <label for="dateFrom" class="form-label">From Date</label>
+                        <input type="date" name="date_from" id="dateFrom" class="form-control" 
+                               value="{{ current_filters.date_from }}">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="dateTo" class="form-label">To Date</label>
+                        <input type="date" name="date_to" id="dateTo" class="form-control" 
+                               value="{{ current_filters.date_to }}">
+                    </div>
+                    
+                    <!-- Sort Options -->
+                    <div class="col-md-4">
+                        <label for="sortSelect" class="form-label">Sort By</label>
+                        <select name="sort" id="sortSelect" class="form-select">
+                            <option value="-upload_date" {% if current_filters.sort == '-upload_date' %}selected{% endif %}>Newest First</option>
+                            <option value="upload_date" {% if current_filters.sort == 'upload_date' %}selected{% endif %}>Oldest First</option>
+                            <option value="track" {% if current_filters.sort == 'track' %}selected{% endif %}>Track (A-Z)</option>
+                            <option value="-track" {% if current_filters.sort == '-track' %}selected{% endif %}>Track (Z-A)</option>
+                            <option value="car" {% if current_filters.sort == 'car' %}selected{% endif %}>Car (A-Z)</option>
+                            <option value="-car" {% if current_filters.sort == '-car' %}selected{% endif %}>Car (Z-A)</option>
+                            <option value="-lap_count" {% if current_filters.sort == '-lap_count' %}selected{% endif %}>Most Laps</option>
+                            <option value="lap_count" {% if current_filters.sort == 'lap_count' %}selected{% endif %}>Fewest Laps</option>
+                            <option value="session_type" {% if current_filters.sort == 'session_type' %}selected{% endif %}>Session Type (A-Z)</option>
+                            <option value="-session_type" {% if current_filters.sort == '-session_type' %}selected{% endif %}>Session Type (Z-A)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Apply Filters
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="resetFilters">
+                            <i class="bi bi-arrow-clockwise"></i> Reset
+                        </button>
+                        {% if active_filter_count > 0 %}
+                            <small class="text-muted ms-3">
+                                <i class="bi bi-info-circle"></i> {{ active_filter_count }} filter{{ active_filter_count|pluralize }} active
+                            </small>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Hidden field to preserve per_page -->
+                <input type="hidden" name="per_page" value="{{ current_per_page }}">
+            </form>
+        </div>
+    </div>
+</div>
+
 {% if sessions %}
   <div class="table-responsive mb-4">
     <table class="table table-striped align-middle">
@@ -41,9 +170,8 @@
           <th>Name</th>
           <th>Track</th>
           <th>Car</th>
+          <th>Session Type</th>
           <th>Fastest Lap</th>
-          <th>Driver</th>
-          <th>Laps</th>
           <th>Upload Date</th>
           <th class="text-end">Actions</th>
         </tr>
@@ -59,6 +187,7 @@
             </td>
             <td>{{ session.track }}</td>
             <td>{{ session.car }}</td>
+            <td>{{ session.session_type|default:"—" }}</td>
             <td>
               {% if fastest %}
                 <span class="text-success"><i class="bi bi-stopwatch"></i> {{ fastest.format_time }}</span>
@@ -66,14 +195,6 @@
                 <span class="text-muted">—</span>
               {% endif %}
             </td>
-            <td>
-              {% if fastest %}
-                {{ fastest.driver_name }}
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
-            </td>
-            <td>{{ session.lap_count }}</td>
             <td>
               <small class="text-muted">{{ session.upload_date|date:"M j, Y" }}</small>
               <br>
@@ -106,7 +227,7 @@
       <!-- First page -->
       {% if page_obj.has_previous %}
         <li class="page-item">
-          <a class="page-link" href="?page=1&per_page={{ current_per_page }}" aria-label="First">
+          <a class="page-link pagination-link" href="?page=1" data-page="1" aria-label="First">
             <span aria-hidden="true">&laquo;&laquo;</span>
           </a>
         </li>
@@ -115,7 +236,7 @@
       <!-- Previous page -->
       {% if page_obj.has_previous %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&per_page={{ current_per_page }}" aria-label="Previous">
+          <a class="page-link pagination-link" href="?page={{ page_obj.previous_page_number }}" data-page="{{ page_obj.previous_page_number }}" aria-label="Previous">
             <span aria-hidden="true">&laquo;</span>
           </a>
         </li>
@@ -133,7 +254,7 @@
           </li>
         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&per_page={{ current_per_page }}">{{ num }}</a>
+            <a class="page-link pagination-link" href="?page={{ num }}" data-page="{{ num }}">{{ num }}</a>
           </li>
         {% endif %}
       {% endfor %}
@@ -141,7 +262,7 @@
       <!-- Next page -->
       {% if page_obj.has_next %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ page_obj.next_page_number }}&per_page={{ current_per_page }}" aria-label="Next">
+          <a class="page-link pagination-link" href="?page={{ page_obj.next_page_number }}" data-page="{{ page_obj.next_page_number }}" aria-label="Next">
             <span aria-hidden="true">&raquo;</span>
           </a>
         </li>
@@ -154,7 +275,7 @@
       <!-- Last page -->
       {% if page_obj.has_next %}
         <li class="page-item">
-          <a class="page-link" href="?page={{ paginator.num_pages }}&per_page={{ current_per_page }}" aria-label="Last">
+          <a class="page-link pagination-link" href="?page={{ paginator.num_pages }}" data-page="{{ paginator.num_pages }}" aria-label="Last">
             <span aria-hidden="true">&raquo;&raquo;</span>
           </a>
         </li>
@@ -215,6 +336,123 @@ document.getElementById('perPageSelect').addEventListener('change', function() {
     url.searchParams.set('per_page', perPage);
     url.searchParams.delete('page'); // Reset to page 1 when changing per_page
     window.location.href = url.toString();
+});
+
+// Filter form functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filterForm');
+    const searchInput = document.getElementById('searchInput');
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    const resetFiltersBtn = document.getElementById('resetFilters');
+    const filterToggleIcon = document.getElementById('filterToggleIcon');
+    const filterCollapse = document.getElementById('filterCollapse');
+    
+    let searchTimeout;
+    
+    // Auto-submit filters with debouncing for search
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                submitFilterForm();
+            }, 500); // 500ms delay for search
+        });
+    }
+    
+    // Auto-submit on dropdown changes
+    const selects = filterForm.querySelectorAll('select');
+    selects.forEach(select => {
+        select.addEventListener('change', function() {
+            submitFilterForm();
+        });
+    });
+    
+    // Auto-submit on date changes
+    const dateInputs = filterForm.querySelectorAll('input[type="date"]');
+    dateInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            submitFilterForm();
+        });
+    });
+    
+    // Submit filter form
+    function submitFilterForm() {
+        // Remove page parameter when applying filters
+        const pageInput = filterForm.querySelector('input[name="page"]');
+        if (pageInput) {
+            pageInput.remove();
+        }
+        filterForm.submit();
+    }
+    
+    // Clear all filters
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function() {
+            // Clear URL parameters except per_page
+            const url = new URL(window.location);
+            const perPage = url.searchParams.get('per_page');
+            url.search = '';
+            if (perPage) url.searchParams.set('per_page', perPage);
+            window.location.href = url.toString();
+        });
+    }
+    
+    // Reset filters to defaults
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', function() {
+            filterForm.reset();
+            submitFilterForm();
+        });
+    }
+    
+    // Update pagination links to preserve filters
+    function updatePaginationLinks() {
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams();
+        
+        // Add all form data except page
+        for (const [key, value] of formData.entries()) {
+            if (key !== 'page' && value && value !== 'all') {
+                params.set(key, value);
+            }
+        }
+        
+        // Update all pagination links
+        document.querySelectorAll('.pagination-link').forEach(link => {
+            const url = new URL(link.href, window.location.origin);
+            const page = link.dataset.page;
+            
+            // Clear existing params except page
+            const newUrl = new URL(window.location.origin + window.location.pathname);
+            newUrl.searchParams.set('page', page);
+            
+            // Add filter params
+            for (const [key, value] of params.entries()) {
+                newUrl.searchParams.set(key, value);
+            }
+            
+            link.href = newUrl.toString();
+        });
+    }
+    
+    // Update pagination links on page load
+    updatePaginationLinks();
+    
+    // Handle filter collapse toggle icon
+    if (filterCollapse) {
+        filterCollapse.addEventListener('shown.bs.collapse', function() {
+            filterToggleIcon.className = 'bi bi-chevron-up';
+        });
+        
+        filterCollapse.addEventListener('hidden.bs.collapse', function() {
+            filterToggleIcon.className = 'bi bi-chevron-down';
+        });
+    }
+    
+    // Set initial icon state
+    if (filterCollapse && filterCollapse.classList.contains('show')) {
+        filterToggleIcon.className = 'bi bi-chevron-up';
+    }
 });
 </script>
 {% endblock %}
