@@ -29,20 +29,20 @@ class HomeView(ListView):
     def get_queryset(self):
         """Optimize queries with annotations and apply filters"""
         queryset = Session.objects.annotate(lap_count=Count("laps"))
-        
+
         # Apply filters
         track = self.request.GET.get('track')
         if track and track != 'all':
             queryset = queryset.filter(track=track)
-        
+
         car = self.request.GET.get('car')
         if car and car != 'all':
             queryset = queryset.filter(car=car)
-        
+
         session_type = self.request.GET.get('session_type')
         if session_type and session_type != 'all':
             queryset = queryset.filter(session_type=session_type)
-        
+
         # Date range filtering
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
@@ -60,17 +60,17 @@ class HomeView(ListView):
                 queryset = queryset.filter(upload_date__lte=date_to_end)
             except ValueError:
                 pass  # Invalid date format, ignore filter
-        
+
         # Search functionality
         search = self.request.GET.get('search')
         if search:
             queryset = queryset.filter(
-                Q(session_name__icontains=search) |
-                Q(track__icontains=search) |
-                Q(car__icontains=search) |
-                Q(laps__driver_name__icontains=search)
+                Q(session_name__icontains=search)
+                | Q(track__icontains=search)
+                | Q(car__icontains=search)
+                | Q(laps__driver_name__icontains=search)
             ).distinct()
-        
+
         # Sorting
         sort_by = self.request.GET.get('sort', '-upload_date')
         valid_sort_fields = [
@@ -84,7 +84,7 @@ class HomeView(ListView):
             queryset = queryset.order_by(sort_by)
         else:
             queryset = queryset.order_by('-upload_date')
-        
+
         return queryset
 
     def get_paginate_by(self, queryset):
@@ -108,7 +108,7 @@ class HomeView(ListView):
         context['tracks'] = Session.objects.values_list('track', flat=True).distinct().order_by('track')
         context['cars'] = Session.objects.values_list('car', flat=True).distinct().order_by('car')
         context['session_types'] = Session.objects.values_list('session_type', flat=True).distinct().order_by('session_type')
-        
+
         # Current filter values
         context['current_filters'] = {
             'track': self.request.GET.get('track', 'all'),
@@ -119,10 +119,12 @@ class HomeView(ListView):
             'search': self.request.GET.get('search', ''),
             'sort': self.request.GET.get('sort', '-upload_date'),
         }
-        
+
         # Add filter count for display
-        active_filters = sum(1 for key, value in context['current_filters'].items() 
-                           if value and value != 'all' and value != '-upload_date')
+        active_filters = sum(
+            1 for key, value in context['current_filters'].items()
+            if value and value != 'all' and value != '-upload_date'
+        )
         context['active_filter_count'] = active_filters
 
         return context
@@ -381,11 +383,14 @@ class SessionDetailView(ListView):
                 # Fallback if no racing laps (only out laps)
                 context["fastest_total"] = min(lap.total_time for lap in all_laps)
                 context["slowest_total"] = max(lap.total_time for lap in all_laps)
-            
+
             # Personal best per driver - exclude out laps
             driver_pb_total = {}
             for driver in context["drivers"]:
-                driver_racing_laps = [lap for lap in all_laps if lap.driver_name == driver and lap.lap_number > 0]
+                driver_racing_laps = [
+                    lap for lap in all_laps
+                    if lap.driver_name == driver and lap.lap_number > 0
+                ]
                 if driver_racing_laps:
                     driver_pb_total[driver] = min(lap.total_time for lap in driver_racing_laps)
             for lap in laps:
@@ -400,7 +405,8 @@ class SessionDetailView(ListView):
         # Fastest and slowest overall for each sector - exclude out laps
         for idx in range(context["sector_count"]):
             racing_sector_times = [
-                lap.sectors[idx] for lap in all_laps if len(lap.sectors) > idx and lap.lap_number > 0
+                lap.sectors[idx] for lap in all_laps
+                if len(lap.sectors) > idx and lap.lap_number > 0
             ]
             if racing_sector_times:
                 sector_highlights[idx] = {
@@ -424,10 +430,14 @@ class SessionDetailView(ListView):
         # Build a dict: {driver: {sector_idx: pb_time}}
         driver_pb = {driver: {} for driver in context["drivers"]}
         for driver in context["drivers"]:
-            driver_racing_laps = [lap for lap in all_laps if lap.driver_name == driver and lap.lap_number > 0]
+            driver_racing_laps = [
+                lap for lap in all_laps
+                if lap.driver_name == driver and lap.lap_number > 0
+            ]
             for idx in range(context["sector_count"]):
                 racing_sector_times = [
-                    lap.sectors[idx] for lap in driver_racing_laps if len(lap.sectors) > idx
+                    lap.sectors[idx] for lap in driver_racing_laps
+                    if len(lap.sectors) > idx
                 ]
                 if racing_sector_times:
                     driver_pb[driver][idx] = min(racing_sector_times)
@@ -583,9 +593,9 @@ def driver_autocomplete(request):
     term = request.GET.get('term', '')
     if len(term) < 2:  # Only search if at least 2 characters
         return JsonResponse([], safe=False)
-    
+
     drivers = Lap.objects.filter(
         driver_name__icontains=term
     ).values_list('driver_name', flat=True).distinct().order_by('driver_name')[:10]
-    
+
     return JsonResponse(list(drivers), safe=False)
