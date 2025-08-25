@@ -369,48 +369,68 @@ class SessionDetailView(ListView):
             else:
                 lap.sectors = []
 
-        # Row-level highlighting for total time (fastest, slowest, pb)
+        # Row-level highlighting for total time (fastest, slowest, pb) - exclude out laps
         laps = context["laps"]
         if laps:
-            context["fastest_total"] = min(lap.total_time for lap in all_laps)
-            context["slowest_total"] = max(lap.total_time for lap in all_laps)
-            # Personal best per driver
+            # Filter out laps (lap_number = 0) for best/worst calculations
+            racing_laps = [lap for lap in all_laps if lap.lap_number > 0]
+            if racing_laps:
+                context["fastest_total"] = min(lap.total_time for lap in racing_laps)
+                context["slowest_total"] = max(lap.total_time for lap in racing_laps)
+            else:
+                # Fallback if no racing laps (only out laps)
+                context["fastest_total"] = min(lap.total_time for lap in all_laps)
+                context["slowest_total"] = max(lap.total_time for lap in all_laps)
+            
+            # Personal best per driver - exclude out laps
             driver_pb_total = {}
             for driver in context["drivers"]:
-                driver_laps = [lap for lap in all_laps if lap.driver_name == driver]
-                if driver_laps:
-                    driver_pb_total[driver] = min(lap.total_time for lap in driver_laps)
+                driver_racing_laps = [lap for lap in all_laps if lap.driver_name == driver and lap.lap_number > 0]
+                if driver_racing_laps:
+                    driver_pb_total[driver] = min(lap.total_time for lap in driver_racing_laps)
             for lap in laps:
                 lap.is_pb_total = (
                     driver_pb_total.get(lap.driver_name) is not None
                     and lap.total_time == driver_pb_total[lap.driver_name]
+                    and lap.lap_number > 0  # Only racing laps can be PB
                 )
 
-        # Calculate sector highlights: fastest, slowest, and pb per driver
+        # Calculate sector highlights: fastest, slowest, and pb per driver - exclude out laps
         sector_highlights = {}
-        # Fastest and slowest overall for each sector
+        # Fastest and slowest overall for each sector - exclude out laps
         for idx in range(context["sector_count"]):
-            sector_times = [
-                lap.sectors[idx] for lap in all_laps if len(lap.sectors) > idx
+            racing_sector_times = [
+                lap.sectors[idx] for lap in all_laps if len(lap.sectors) > idx and lap.lap_number > 0
             ]
-            if sector_times:
+            if racing_sector_times:
                 sector_highlights[idx] = {
-                    "fastest": min(sector_times),
-                    "slowest": max(sector_times),
+                    "fastest": min(racing_sector_times),
+                    "slowest": max(racing_sector_times),
                     "pb": None,  # Will be set per lap below
                 }
+            else:
+                # Fallback if no racing laps (only out laps)
+                all_sector_times = [
+                    lap.sectors[idx] for lap in all_laps if len(lap.sectors) > idx
+                ]
+                if all_sector_times:
+                    sector_highlights[idx] = {
+                        "fastest": min(all_sector_times),
+                        "slowest": max(all_sector_times),
+                        "pb": None,
+                    }
 
-        # Personal best per driver for each sector
+        # Personal best per driver for each sector - exclude out laps
         # Build a dict: {driver: {sector_idx: pb_time}}
         driver_pb = {driver: {} for driver in context["drivers"]}
         for driver in context["drivers"]:
-            driver_laps = [lap for lap in all_laps if lap.driver_name == driver]
+            driver_racing_laps = [lap for lap in all_laps if lap.driver_name == driver and lap.lap_number > 0]
             for idx in range(context["sector_count"]):
-                sector_times = [
-                    lap.sectors[idx] for lap in driver_laps if len(lap.sectors) > idx
+                racing_sector_times = [
+                    lap.sectors[idx] for lap in driver_racing_laps if len(lap.sectors) > idx
                 ]
-                if sector_times:
-                    driver_pb[driver][idx] = min(sector_times)
+                if racing_sector_times:
+                    driver_pb[driver][idx] = min(racing_sector_times)
 
         # Attach per-lap sector highlight info for template
         for lap in context["laps"]:
