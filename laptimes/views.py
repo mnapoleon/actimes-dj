@@ -31,29 +31,31 @@ class HomeView(ListView):
         queryset = Session.objects.annotate(lap_count=Count("laps"))
 
         # Apply filters
-        track = self.request.GET.get('track')
-        if track and track != 'all':
+        track = self.request.GET.get("track")
+        if track and track != "all":
             queryset = queryset.filter(track=track)
 
-        car = self.request.GET.get('car')
-        if car and car != 'all':
+        car = self.request.GET.get("car")
+        if car and car != "all":
             queryset = queryset.filter(car=car)
 
-        session_type = self.request.GET.get('session_type')
-        if session_type and session_type != 'all':
+        session_type = self.request.GET.get("session_type")
+        if session_type and session_type != "all":
             queryset = queryset.filter(session_type=session_type)
 
         # Date range filtering
-        date_from = self.request.GET.get('date_from')
-        date_to = self.request.GET.get('date_to')
+        date_from = self.request.GET.get("date_from")
+        date_to = self.request.GET.get("date_to")
         if date_from:
             queryset = queryset.filter(upload_date__gte=date_from)
         if date_to:
             # Add 23:59:59 to include the entire day
-            from django.utils import timezone
             from datetime import datetime, time
+
+            from django.utils import timezone
+
             try:
-                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+                date_to_obj = datetime.strptime(date_to, "%Y-%m-%d")
                 date_to_end = timezone.make_aware(
                     datetime.combine(date_to_obj.date(), time.max)
                 )
@@ -62,7 +64,7 @@ class HomeView(ListView):
                 pass  # Invalid date format, ignore filter
 
         # Search functionality
-        search = self.request.GET.get('search')
+        search = self.request.GET.get("search")
         if search:
             queryset = queryset.filter(
                 Q(session_name__icontains=search)
@@ -72,18 +74,23 @@ class HomeView(ListView):
             ).distinct()
 
         # Sorting
-        sort_by = self.request.GET.get('sort', '-upload_date')
+        sort_by = self.request.GET.get("sort", "-upload_date")
         valid_sort_fields = [
-            'upload_date', '-upload_date',
-            'track', '-track',
-            'car', '-car',
-            'session_type', '-session_type',
-            'lap_count', '-lap_count'
+            "upload_date",
+            "-upload_date",
+            "track",
+            "-track",
+            "car",
+            "-car",
+            "session_type",
+            "-session_type",
+            "lap_count",
+            "-lap_count",
         ]
         if sort_by in valid_sort_fields:
             queryset = queryset.order_by(sort_by)
         else:
-            queryset = queryset.order_by('-upload_date')
+            queryset = queryset.order_by("-upload_date")
 
         return queryset
 
@@ -105,27 +112,36 @@ class HomeView(ListView):
         context["per_page_options"] = [10, 20, 50, 100]
 
         # Add filter options
-        context['tracks'] = Session.objects.values_list('track', flat=True).distinct().order_by('track')
-        context['cars'] = Session.objects.values_list('car', flat=True).distinct().order_by('car')
-        context['session_types'] = Session.objects.values_list('session_type', flat=True).distinct().order_by('session_type')
+        context["tracks"] = (
+            Session.objects.values_list("track", flat=True).distinct().order_by("track")
+        )
+        context["cars"] = (
+            Session.objects.values_list("car", flat=True).distinct().order_by("car")
+        )
+        context["session_types"] = (
+            Session.objects.values_list("session_type", flat=True)
+            .distinct()
+            .order_by("session_type")
+        )
 
         # Current filter values
-        context['current_filters'] = {
-            'track': self.request.GET.get('track', 'all'),
-            'car': self.request.GET.get('car', 'all'),
-            'session_type': self.request.GET.get('session_type', 'all'),
-            'date_from': self.request.GET.get('date_from', ''),
-            'date_to': self.request.GET.get('date_to', ''),
-            'search': self.request.GET.get('search', ''),
-            'sort': self.request.GET.get('sort', '-upload_date'),
+        context["current_filters"] = {
+            "track": self.request.GET.get("track", "all"),
+            "car": self.request.GET.get("car", "all"),
+            "session_type": self.request.GET.get("session_type", "all"),
+            "date_from": self.request.GET.get("date_from", ""),
+            "date_to": self.request.GET.get("date_to", ""),
+            "search": self.request.GET.get("search", ""),
+            "sort": self.request.GET.get("sort", "-upload_date"),
         }
 
         # Add filter count for display
         active_filters = sum(
-            1 for key, value in context['current_filters'].items()
-            if value and value != 'all' and value != '-upload_date'
+            1
+            for key, value in context["current_filters"].items()
+            if value and value != "all" and value != "-upload_date"
         )
-        context['active_filter_count'] = active_filters
+        context["active_filter_count"] = active_filters
 
         return context
 
@@ -388,11 +404,14 @@ class SessionDetailView(ListView):
             driver_pb_total = {}
             for driver in context["drivers"]:
                 driver_racing_laps = [
-                    lap for lap in all_laps
+                    lap
+                    for lap in all_laps
                     if lap.driver_name == driver and lap.lap_number > 0
                 ]
                 if driver_racing_laps:
-                    driver_pb_total[driver] = min(lap.total_time for lap in driver_racing_laps)
+                    driver_pb_total[driver] = min(
+                        lap.total_time for lap in driver_racing_laps
+                    )
             for lap in laps:
                 lap.is_pb_total = (
                     driver_pb_total.get(lap.driver_name) is not None
@@ -405,7 +424,8 @@ class SessionDetailView(ListView):
         # Fastest and slowest overall for each sector - exclude out laps
         for idx in range(context["sector_count"]):
             racing_sector_times = [
-                lap.sectors[idx] for lap in all_laps
+                lap.sectors[idx]
+                for lap in all_laps
                 if len(lap.sectors) > idx and lap.lap_number > 0
             ]
             if racing_sector_times:
@@ -431,12 +451,14 @@ class SessionDetailView(ListView):
         driver_pb = {driver: {} for driver in context["drivers"]}
         for driver in context["drivers"]:
             driver_racing_laps = [
-                lap for lap in all_laps
+                lap
+                for lap in all_laps
                 if lap.driver_name == driver and lap.lap_number > 0
             ]
             for idx in range(context["sector_count"]):
                 racing_sector_times = [
-                    lap.sectors[idx] for lap in driver_racing_laps
+                    lap.sectors[idx]
+                    for lap in driver_racing_laps
                     if len(lap.sectors) > idx
                 ]
                 if racing_sector_times:
@@ -590,12 +612,15 @@ def delete_driver_from_session(request, session_pk, driver_name):
 
 def driver_autocomplete(request):
     """API endpoint for driver name autocomplete"""
-    term = request.GET.get('term', '')
+    term = request.GET.get("term", "")
     if len(term) < 2:  # Only search if at least 2 characters
         return JsonResponse([], safe=False)
 
-    drivers = Lap.objects.filter(
-        driver_name__icontains=term
-    ).values_list('driver_name', flat=True).distinct().order_by('driver_name')[:10]
+    drivers = (
+        Lap.objects.filter(driver_name__icontains=term)
+        .values_list("driver_name", flat=True)
+        .distinct()
+        .order_by("driver_name")[:10]
+    )
 
     return JsonResponse(list(drivers), safe=False)

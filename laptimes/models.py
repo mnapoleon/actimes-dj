@@ -23,9 +23,15 @@ class Session(models.Model):
             models.Index(fields=["track"]),  # For filtering/searching by track
             models.Index(fields=["car"]),  # For filtering/searching by car
             models.Index(fields=["session_type"]),  # For session type filtering
-            models.Index(fields=["track", "-upload_date"]),  # Compound index for track + date
-            models.Index(fields=["car", "-upload_date"]),    # Compound index for car + date
-            models.Index(fields=["session_type", "-upload_date"]),  # Compound index for session type + date
+            models.Index(
+                fields=["track", "-upload_date"]
+            ),  # Compound index for track + date
+            models.Index(
+                fields=["car", "-upload_date"]
+            ),  # Compound index for car + date
+            models.Index(
+                fields=["session_type", "-upload_date"]
+            ),  # Compound index for session type + date
         ]
 
     def __str__(self):
@@ -77,7 +83,9 @@ class Session(models.Model):
             # Get all laps for total count display
             all_driver_laps = self.laps.filter(driver_name=driver_name)
             # Get only racing laps for performance calculations
-            driver_racing_laps = self.laps.filter(driver_name=driver_name, lap_number__gt=0)
+            driver_racing_laps = self.laps.filter(
+                driver_name=driver_name, lap_number__gt=0
+            )
             racing_lap_times = [lap.total_time for lap in driver_racing_laps]
 
             # Use all laps count for display, but racing laps for calculations
