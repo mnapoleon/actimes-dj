@@ -24,5 +24,9 @@ urlpatterns = [
         name="delete_driver",
     ),
     path("api/session/<int:pk>/", views.session_data_api, name="session_api"),
-    path("api/drivers/autocomplete/", views.driver_autocomplete, name="driver_autocomplete"),
+    path(
+        "api/drivers/autocomplete/",
+        views.driver_autocomplete,
+        name="driver_autocomplete",
+    ),
 ]

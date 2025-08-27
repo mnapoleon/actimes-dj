@@ -21,6 +21,22 @@
   color: white !important;
 }
 
+/* Custom orange styling for out laps (lap 0) */
+.badge.bg-outlap {
+  background-color: #f97316 !important;
+  color: white !important;
+}
+
+.table-outlap {
+  background-color: rgba(249, 115, 22, 0.15) !important;
+  color: inherit !important;
+}
+
+.table-outlap td {
+  background-color: rgba(249, 115, 22, 0.15) !important;
+  color: inherit !important;
+}
+
 /* Custom purple table row for fastest lap - much lighter than badge */
 .table-purple {
   background-color: rgba(139, 92, 246, 0.15) !important;

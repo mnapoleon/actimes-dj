@@ -23,9 +23,15 @@ class Session(models.Model):
             models.Index(fields=["track"]),  # For filtering/searching by track
             models.Index(fields=["car"]),  # For filtering/searching by car
             models.Index(fields=["session_type"]),  # For session type filtering
-            models.Index(fields=["track", "-upload_date"]),  # Compound index for track + date
-            models.Index(fields=["car", "-upload_date"]),    # Compound index for car + date
-            models.Index(fields=["session_type", "-upload_date"]),  # Compound index for session type + date
+            models.Index(
+                fields=["track", "-upload_date"]
+            ),  # Compound index for track + date
+            models.Index(
+                fields=["car", "-upload_date"]
+            ),  # Compound index for car + date
+            models.Index(
+                fields=["session_type", "-upload_date"]
+            ),  # Compound index for session type + date
         ]
 
     def __str__(self):
@@ -34,16 +40,16 @@ class Session(models.Model):
         return f"{self.track} - {self.car} ({self.session_type})"
 
     def get_fastest_lap(self):
-        """Get the fastest lap in this session"""
-        return self.laps.order_by("total_time").first()
+        """Get the fastest lap in this session - exclude out laps"""
+        return self.laps.filter(lap_number__gt=0).order_by("total_time").first()
 
     def get_drivers(self):
         """Get list of unique drivers in this session"""
         return self.laps.values_list("driver_name", flat=True).distinct()
 
     def get_optimal_lap_time(self, driver_name):
-        """Calculate optimal lap time (sum of best sectors) for a driver"""
-        driver_laps = self.laps.filter(driver_name=driver_name)
+        """Calculate optimal lap time (sum of best sectors) for a driver - exclude out laps"""
+        driver_laps = self.laps.filter(driver_name=driver_name, lap_number__gt=0)
         if not driver_laps.exists():
             return None
 
@@ -70,46 +76,58 @@ class Session(models.Model):
         return sum(best_sectors) if best_sectors else None
 
     def get_driver_statistics(self):
-        """Calculate comprehensive statistics for each driver"""
+        """Calculate comprehensive statistics for each driver - exclude out laps"""
         stats = {}
 
         for driver_name in self.get_drivers():
-            driver_laps = self.laps.filter(driver_name=driver_name)
-            lap_times = [lap.total_time for lap in driver_laps]
+            # Get all laps for total count display
+            all_driver_laps = self.laps.filter(driver_name=driver_name)
+            # Get only racing laps for performance calculations
+            driver_racing_laps = self.laps.filter(
+                driver_name=driver_name, lap_number__gt=0
+            )
+            racing_lap_times = [lap.total_time for lap in driver_racing_laps]
 
-            if not lap_times:
-                continue
+            # Use all laps count for display, but racing laps for calculations
+            if not racing_lap_times:
+                # If no racing laps, skip this driver or use all laps as fallback
+                if not all_driver_laps.exists():
+                    continue
+                # Fallback to all laps if only out laps exist
+                lap_times = [lap.total_time for lap in all_driver_laps]
+                racing_lap_times = lap_times
 
-            # Calculate basic statistics
-            best_lap_time = min(lap_times)
-            avg_lap_time = sum(lap_times) / len(lap_times)
+            # Calculate basic statistics using racing laps only
+            best_lap_time = min(racing_lap_times)
+            avg_lap_time = sum(racing_lap_times) / len(racing_lap_times)
 
             # Calculate consistency (standard deviation) - drop two worst laps
-            if len(lap_times) > 3:
+            if len(racing_lap_times) > 3:
                 # Sort lap times and drop the two worst (highest) times
-                sorted_times = sorted(lap_times)
+                sorted_times = sorted(racing_lap_times)
                 filtered_times = sorted_times[:-2]  # Remove two worst laps
                 filtered_avg = sum(filtered_times) / len(filtered_times)
                 variance = sum((x - filtered_avg) ** 2 for x in filtered_times) / len(
                     filtered_times
                 )
                 consistency = variance**0.5
-            elif len(lap_times) > 1:
-                # If 3 or fewer laps, use all laps for consistency
-                variance = sum((x - avg_lap_time) ** 2 for x in lap_times) / len(
-                    lap_times
+            elif len(racing_lap_times) > 1:
+                # If 3 or fewer laps, use all racing laps for consistency
+                variance = sum((x - avg_lap_time) ** 2 for x in racing_lap_times) / len(
+                    racing_lap_times
                 )
                 consistency = variance**0.5
             else:
                 consistency = 0.0
 
-            # Get optimal lap time
+            # Get optimal lap time (already excludes out laps)
             optimal_lap_time = self.get_optimal_lap_time(driver_name)
 
             stats[driver_name] = {
                 "best_lap_time": best_lap_time,
                 "optimal_lap_time": optimal_lap_time,
-                "lap_count": len(lap_times),
+                "lap_count": all_driver_laps.count(),  # Show total lap count including out laps
+                "racing_lap_count": len(racing_lap_times),  # Count of racing laps only
                 "avg_lap_time": avg_lap_time,
                 "consistency": consistency,
                 "visible": True,  # Default visibility state

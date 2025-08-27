@@ -221,9 +221,13 @@
                 </thead>
                 <tbody>
                     {% for lap in laps %}
-                    <tr {% if lap.total_time == fastest_total %}class="table-purple"{% elif lap.is_pb_total %}class="table-personal-best"{% elif lap.total_time == slowest_total %}class="table-danger"{% endif %}>
+                    <tr {% if lap.lap_number == 0 %}class="table-outlap"{% elif lap.total_time == fastest_total %}class="table-purple"{% elif lap.is_pb_total %}class="table-personal-best"{% elif lap.total_time == slowest_total %}class="table-danger"{% endif %}>
                         <td>
-                            <span class="badge bg-primary">{{ lap.lap_number|add:1 }}</span>
+                            {% if lap.lap_number == 0 %}
+                                <span class="badge bg-outlap">Out</span>
+                            {% else %}
+                                <span class="badge bg-primary">{{ lap.lap_number }}</span>
+                            {% endif %}
                         </td>
                         <td>
                             <span class="fw-bold text-primary">{{ lap.driver_name }}</span>
@@ -235,7 +239,10 @@
     <td>
         {% with idx=forloop.counter0 %}
             {% with highlight=lap.sector_highlights|index:idx %}
-                {% if highlight %}
+                {% if lap.lap_number == 0 %}
+                    <!-- Out lap - no highlighting -->
+                    <span class="text-muted">{{ s|floatformat:3 }}s</span>
+                {% elif highlight %}
                     {% if s|floatformat:3 == highlight.fastest|floatformat:3 %}
                         <span class="badge bg-purple">{{ s|floatformat:3 }}s</span>
                     {% elif s|floatformat:3 == highlight.pb|floatformat:3 %}
