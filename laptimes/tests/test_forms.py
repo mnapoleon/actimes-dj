@@ -43,7 +43,9 @@ class JSONUploadFormTests(BaseTestCase, FormTestMixin):
     def test_valid_json_upload(self):
         """Test valid JSON file upload"""
         json_file = self.create_test_json_file()
-        form = JSONUploadForm(data={"upload_type": "files"}, files={"json_files": [json_file]})
+        form = JSONUploadForm(
+            data={"upload_type": "files"}, files={"json_files": [json_file]}
+        )
         self.assertFormValid(form)
 
     def test_invalid_file_extension(self):
@@ -51,22 +53,32 @@ class JSONUploadFormTests(BaseTestCase, FormTestMixin):
         txt_file = SimpleUploadedFile(
             "test.txt", b"not json content", content_type="text/plain"
         )
-        form = JSONUploadForm(data={"upload_type": "files"}, files={"json_files": [txt_file]})
-        self.assertFormInvalid(form, {"json_files": ["test.txt: File must have .json extension"]})
+        form = JSONUploadForm(
+            data={"upload_type": "files"}, files={"json_files": [txt_file]}
+        )
+        self.assertFormInvalid(
+            form, {"json_files": ["test.txt: File must have .json extension"]}
+        )
 
     def test_invalid_json_content(self):
         """Test rejection of invalid JSON content"""
         invalid_file = SimpleUploadedFile(
             "test.json", b"invalid json content", content_type="application/json"
         )
-        form = JSONUploadForm(data={"upload_type": "files"}, files={"json_files": [invalid_file]})
-        self.assertFormInvalid(form, {"json_files": ["test.json: Invalid JSON file format"]})
+        form = JSONUploadForm(
+            data={"upload_type": "files"}, files={"json_files": [invalid_file]}
+        )
+        self.assertFormInvalid(
+            form, {"json_files": ["test.json: Invalid JSON file format"]}
+        )
 
     def test_missing_required_fields(self):
         """Test rejection of JSON missing required fields"""
         incomplete_data = {"track": "Test Track"}
         json_file = self.create_test_json_file(incomplete_data)
-        form = JSONUploadForm(data={"upload_type": "files"}, files={"json_files": [json_file]})
+        form = JSONUploadForm(
+            data={"upload_type": "files"}, files={"json_files": [json_file]}
+        )
         self.assertFormInvalid(form)
 
     def test_invalid_players_structure(self):
@@ -77,7 +89,9 @@ class JSONUploadFormTests(BaseTestCase, FormTestMixin):
             "sessions": [{"laps": []}],
         }
         json_file = self.create_test_json_file(invalid_data)
-        form = JSONUploadForm(data={"upload_type": "files"}, files={"json_files": [json_file]})
+        form = JSONUploadForm(
+            data={"upload_type": "files"}, files={"json_files": [json_file]}
+        )
         self.assertFormInvalid(form)
 
     def test_empty_sessions(self):
@@ -88,7 +102,9 @@ class JSONUploadFormTests(BaseTestCase, FormTestMixin):
             "sessions": [],
         }
         json_file = self.create_test_json_file(invalid_data)
-        form = JSONUploadForm(data={"upload_type": "files"}, files={"json_files": [json_file]})
+        form = JSONUploadForm(
+            data={"upload_type": "files"}, files={"json_files": [json_file]}
+        )
         self.assertFormInvalid(form)
 
 

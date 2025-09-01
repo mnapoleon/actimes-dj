@@ -11,19 +11,19 @@ from .models import Session
 
 class MultipleFileInput(forms.ClearableFileInput):
     """Custom widget that supports multiple file uploads"""
-    
+
     allow_multiple_selected = True
-    
+
     def __init__(self, attrs=None):
         super().__init__(attrs)
         if attrs is None:
             attrs = {}
-        attrs['multiple'] = True
+        attrs["multiple"] = True
         self.attrs.update(attrs)
-        
+
     def value_from_datadict(self, data, files, name):
         """Return a list of files for multiple file upload"""
-        if hasattr(files, 'getlist'):
+        if hasattr(files, "getlist"):
             return files.getlist(name)
         else:
             file_data = files.get(name)
@@ -37,30 +37,30 @@ class MultipleFileInput(forms.ClearableFileInput):
 
 class MultipleFileField(forms.FileField):
     """Custom field that handles multiple file uploads"""
-    
+
     widget = MultipleFileInput
-    
+
     def to_python(self, data):
         """Convert the uploaded data to a list of files"""
         if data in self.empty_values:
             return []
         elif not isinstance(data, list):
             data = [data]
-            
+
         files = []
         for item in data:
             if item in self.empty_values:
                 continue
             # Call parent's to_python for each file
             files.append(super().to_python(item))
-        
+
         return files
-        
+
     def validate(self, value):
         """Validate the list of files"""
         if not value and self.required:
-            raise ValidationError(self.error_messages['required'], code='required')
-        
+            raise ValidationError(self.error_messages["required"], code="required")
+
         for file_obj in value:
             super().validate(file_obj)
 
@@ -199,28 +199,27 @@ class JSONUploadForm(forms.Form):
     json_files = MultipleFileField(
         label="Race Data Files",
         help_text="Upload JSON files containing race session data (supports multiple files or directories)",
-        widget=MultipleFileInput(attrs={
-            "class": "form-control", 
-            "accept": ".json",
-            "webkitdirectory": False,  # Will be toggled via JavaScript
-        }),
+        widget=MultipleFileInput(
+            attrs={
+                "class": "form-control",
+                "accept": ".json",
+                "webkitdirectory": False,  # Will be toggled via JavaScript
+            }
+        ),
         required=False,
     )
-    
+
     upload_type = forms.ChoiceField(
-        choices=[
-            ('files', 'Upload Files'),
-            ('directory', 'Upload Directory')
-        ],
-        initial='files',
+        choices=[("files", "Upload Files"), ("directory", "Upload Directory")],
+        initial="files",
         widget=forms.RadioSelect(attrs={"class": "form-check-input"}),
-        help_text="Choose whether to upload individual files or an entire directory"
+        help_text="Choose whether to upload individual files or an entire directory",
     )
 
     def clean_json_files(self):
         """Validate uploaded files are valid JSON with expected structure"""
-        files = self.cleaned_data.get('json_files', [])
-        
+        files = self.cleaned_data.get("json_files", [])
+
         if not files:
             raise ValidationError("Please select at least one file to upload")
 
@@ -252,8 +251,13 @@ class JSONUploadForm(forms.Form):
                         continue
 
                     # Validate that sessions is a list and has at least one session
-                    if not isinstance(data["sessions"], list) or len(data["sessions"]) == 0:
-                        errors.append(f"{file.name}: Sessions data must be a list with at least one session")
+                    if (
+                        not isinstance(data["sessions"], list)
+                        or len(data["sessions"]) == 0
+                    ):
+                        errors.append(
+                            f"{file.name}: Sessions data must be a list with at least one session"
+                        )
                         continue
 
                     # Validate that the first session has laps
@@ -312,11 +316,10 @@ class JSONUploadForm(forms.Form):
     def clean(self):
         """Additional form validation"""
         cleaned_data = super().clean()
-        upload_type = cleaned_data.get("upload_type")
-        
+
         # Check if files are provided (the custom field handles this, but double-check)
-        json_files = cleaned_data.get('json_files', [])
+        json_files = cleaned_data.get("json_files", [])
         if not json_files:
             raise ValidationError("Please select files to upload")
-            
+
         return cleaned_data

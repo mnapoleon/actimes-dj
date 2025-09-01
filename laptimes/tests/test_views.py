@@ -69,7 +69,9 @@ class HomeViewTests(BaseTestCase, ViewTestMixin):
     def test_successful_file_upload(self):
         """Test successful JSON file upload creates session and lap"""
         json_file = self.create_test_json_file()
-        response = self.client.post(self.url, {"json_files": json_file, "upload_type": "files"})
+        response = self.client.post(
+            self.url, {"json_files": json_file, "upload_type": "files"}
+        )
 
         self.assertEqual(response.status_code, 302)  # Redirect after success
 

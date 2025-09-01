@@ -161,11 +161,7 @@ class HomeView(ListView):
     def _process_upload(self, form):
         """Process uploaded JSON files and create Session/Lap objects"""
         json_files = form.cleaned_data["json_files"]
-        upload_results = {
-            'successful': 0,
-            'failed': 0,
-            'errors': []
-        }
+        upload_results = {"successful": 0, "failed": 0, "errors": []}
 
         for json_file in json_files:
             try:
@@ -226,25 +222,40 @@ class HomeView(ListView):
                 # Calculate and store pre-computed statistics for performance optimization
                 self._calculate_session_statistics(session)
 
-                upload_results['successful'] += 1
+                upload_results["successful"] += 1
 
             except Exception as e:
-                upload_results['failed'] += 1
-                upload_results['errors'].append(f"{json_file.name}: {str(e)}")
+                upload_results["failed"] += 1
+                upload_results["errors"].append(f"{json_file.name}: {str(e)}")
 
         # Display summary messages
-        if upload_results['successful'] > 0:
-            if upload_results['successful'] == 1:
+        if upload_results["successful"] > 0:
+            if upload_results["successful"] == 1:
                 messages.success(self.request, "Successfully uploaded 1 session.")
             else:
-                messages.success(self.request, f"Successfully uploaded {upload_results['successful']} sessions.")
+                messages.success(
+                    self.request,
+                    f"Successfully uploaded {upload_results['successful']} sessions.",
+                )
 
-        if upload_results['failed'] > 0:
-            if upload_results['failed'] == 1:
-                messages.error(self.request, f"Failed to upload 1 file: {upload_results['errors'][0]}")
+        if upload_results["failed"] > 0:
+            if upload_results["failed"] == 1:
+                messages.error(
+                    self.request,
+                    f"Failed to upload 1 file: {upload_results['errors'][0]}",
+                )
             else:
-                error_list = "<ul>" + "".join([f"<li>{error}</li>" for error in upload_results['errors']]) + "</ul>"
-                messages.error(self.request, f"Failed to upload {upload_results['failed']} files: {error_list}")
+                error_list = (
+                    "<ul>"
+                    + "".join(
+                        [f"<li>{error}</li>" for error in upload_results["errors"]]
+                    )
+                    + "</ul>"
+                )
+                messages.error(
+                    self.request,
+                    f"Failed to upload {upload_results['failed']} files: {error_list}",
+                )
 
         return redirect("home")
 
