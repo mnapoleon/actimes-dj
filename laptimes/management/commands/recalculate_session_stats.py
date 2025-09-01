@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
-from django.db import transaction
-from django.db import models
+from django.db import models, transaction
 
 from laptimes.models import Session
 from laptimes.statistics import SessionStatisticsCalculator

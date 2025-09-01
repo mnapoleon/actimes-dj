@@ -2,8 +2,9 @@
 Unit tests for the statistics calculation module.
 """
 
-from laptimes.models import Session, Lap
+from laptimes.models import Lap, Session
 from laptimes.statistics import SessionStatisticsCalculator
+
 from .base import BaseTestCase
 
 

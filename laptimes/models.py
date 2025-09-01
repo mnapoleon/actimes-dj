@@ -1,9 +1,10 @@
-from django.db import models
-from django.utils import timezone
+import warnings
+
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
-import warnings
+from django.utils import timezone
 
 
 class Session(models.Model):
