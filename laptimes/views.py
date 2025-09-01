@@ -15,6 +15,7 @@ from django.views.generic import (
 
 from .forms import JSONUploadForm, SessionEditForm
 from .models import Lap, Session
+from .statistics import SessionStatisticsCalculator
 
 
 class HomeView(ListView):
@@ -215,6 +216,9 @@ class HomeView(ListView):
                     cuts=lap_data.get("cuts", 0),
                 )
 
+            # Calculate and store pre-computed statistics for performance optimization
+            self._calculate_session_statistics(session)
+
             messages.success(self.request, f"Successfully uploaded session: {session}")
 
         except Exception as e:
@@ -264,6 +268,28 @@ class HomeView(ListView):
 
         except (json.JSONDecodeError, KeyError):
             return "Practice"
+    
+    def _calculate_session_statistics(self, session):
+        """Calculate and store pre-computed statistics during ingestion"""
+        try:
+            calculator = SessionStatisticsCalculator(session)
+            stats = calculator.calculate_all_statistics()
+            
+            # Update session with calculated statistics
+            session.session_statistics = stats['session_statistics']
+            session.chart_data = stats['chart_data']
+            session.sector_statistics = stats['sector_statistics']
+            session.fastest_lap_time = stats['fastest_lap_time']
+            session.fastest_lap_driver = stats['fastest_lap_driver']
+            session.total_laps = stats['total_laps']
+            session.total_drivers = stats['total_drivers']
+            
+            session.save()
+            
+        except Exception as e:
+            # Log the error but don't fail the upload
+            print(f"Warning: Failed to calculate statistics for session {session.id}: {e}")
+            # Statistics will be calculated later via management command or on-demand
 
 
 class SessionDetailView(ListView):
