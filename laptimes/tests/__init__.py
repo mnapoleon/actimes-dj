@@ -9,6 +9,7 @@ This package organizes tests into logical modules:
 - test_admin.py: Django admin interface
 - test_integration.py: End-to-end workflows
 - test_file_management.py: File upload and duplicate detection
+- test_statistics.py: Statistics calculation module tests
 """
 
 # Import all test classes for test discovery
@@ -18,4 +19,5 @@ from .test_file_management import *  # noqa: F403
 from .test_forms import *  # noqa: F403
 from .test_integration import *  # noqa: F403
 from .test_models import *  # noqa: F403
+from .test_statistics import *  # noqa: F403
 from .test_views import *  # noqa: F403

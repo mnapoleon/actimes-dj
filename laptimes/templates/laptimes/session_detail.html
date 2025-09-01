@@ -476,11 +476,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 label: '{{ driver }}',
                 data: [
                     {% for lap_number in unique_lap_numbers %}
-                        {% if chart_data|get_item:driver|get_item:lap_number %}
-                            {{ chart_data|get_item:driver|get_item:lap_number|floatformat:3 }}
-                        {% else %}
-                            null
-                        {% endif %}{% if not forloop.last %},{% endif %}
+                        {% with lap_key=lap_number|stringformat:"s" %}
+                            {% if chart_data|get_item:driver|get_item:lap_key %}
+                                {{ chart_data|get_item:driver|get_item:lap_key|floatformat:3 }}
+                            {% else %}
+                                null
+                            {% endif %}{% if not forloop.last %},{% endif %}
+                        {% endwith %}
                     {% endfor %}
                 ],
                 borderColor: '{{ forloop.counter0|driver_color }}',

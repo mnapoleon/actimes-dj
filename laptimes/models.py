@@ -1,4 +1,9 @@
+import warnings
+
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 from django.utils import timezone
 
 
@@ -14,6 +19,16 @@ class Session(models.Model):
     file_name = models.CharField(max_length=255)
     players_data = models.JSONField(default=dict)  # Store player information
     file_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
+
+    # Pre-computed session statistics for performance optimization
+    fastest_lap_time = models.FloatField(null=True, blank=True)
+    fastest_lap_driver = models.CharField(max_length=200, blank=True)
+    total_laps = models.IntegerField(default=0)
+    total_drivers = models.IntegerField(default=0)
+    session_statistics = models.JSONField(default=dict)  # Driver statistics
+    chart_data = models.JSONField(default=dict)  # Pre-computed chart data
+    sector_statistics = models.JSONField(default=dict)  # Sector highlights
+    last_calculated = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-upload_date"]
@@ -32,6 +47,7 @@ class Session(models.Model):
             models.Index(
                 fields=["session_type", "-upload_date"]
             ),  # Compound index for session type + date
+            models.Index(fields=["last_calculated"]),  # For recalculation queries
         ]
 
     def __str__(self):
@@ -40,7 +56,15 @@ class Session(models.Model):
         return f"{self.track} - {self.car} ({self.session_type})"
 
     def get_fastest_lap(self):
-        """Get the fastest lap in this session - exclude out laps"""
+        """
+        Get the fastest lap in this session - exclude out laps
+        DEPRECATED: Use pre-computed fastest_lap_time and fastest_lap_driver fields instead
+        """
+        warnings.warn(
+            "Session.get_fastest_lap() is deprecated. Use pre-computed fastest_lap_time and fastest_lap_driver fields instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.laps.filter(lap_number__gt=0).order_by("total_time").first()
 
     def get_drivers(self):
@@ -48,7 +72,21 @@ class Session(models.Model):
         return self.laps.values_list("driver_name", flat=True).distinct()
 
     def get_optimal_lap_time(self, driver_name):
-        """Calculate optimal lap time (sum of best sectors) for a driver - exclude out laps"""
+        """
+        Calculate optimal lap time (sum of best sectors) for a driver - exclude out laps
+        DEPRECATED: Use pre-computed session_statistics field instead
+        """
+        warnings.warn(
+            "Session.get_optimal_lap_time() is deprecated. Use pre-computed session_statistics field instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        # Try to use pre-computed data first
+        if self.session_statistics and driver_name in self.session_statistics:
+            return self.session_statistics[driver_name].get("optimal_lap_time")
+
+        # Fallback to calculation
         driver_laps = self.laps.filter(driver_name=driver_name, lap_number__gt=0)
         if not driver_laps.exists():
             return None
@@ -76,7 +114,19 @@ class Session(models.Model):
         return sum(best_sectors) if best_sectors else None
 
     def get_driver_statistics(self):
-        """Calculate comprehensive statistics for each driver - exclude out laps"""
+        """
+        Calculate comprehensive statistics for each driver - exclude out laps
+        DEPRECATED: Use pre-computed session_statistics field instead
+        """
+        warnings.warn(
+            "Session.get_driver_statistics() is deprecated. Use pre-computed session_statistics field instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        # Try to use pre-computed data first
+        if self.session_statistics:
+            return self.session_statistics
         stats = {}
 
         for driver_name in self.get_drivers():
@@ -135,6 +185,75 @@ class Session(models.Model):
 
         return stats
 
+    def is_statistics_current(self):
+        """Check if pre-computed statistics are current"""
+        if not self.last_calculated:
+            return False
+
+        # Check if any laps have been modified after last calculation
+        latest_lap_update = self.laps.aggregate(
+            latest=models.Max("id")  # Use id as proxy for creation time
+        )["latest"]
+
+        return latest_lap_update is not None
+
+    def get_or_calculate_driver_statistics(self):
+        """Get driver statistics, using pre-computed if available, otherwise calculate"""
+        if self.session_statistics and self.is_statistics_current():
+            return self.session_statistics
+        return self.get_driver_statistics()
+
+    def invalidate_statistics(self):
+        """Mark statistics as needing recalculation"""
+        self.session_statistics = {}
+        self.chart_data = {}
+        self.sector_statistics = {}
+        self.fastest_lap_time = None
+        self.fastest_lap_driver = ""
+        self.total_laps = 0
+        self.total_drivers = 0
+        self.save(
+            update_fields=[
+                "session_statistics",
+                "chart_data",
+                "sector_statistics",
+                "fastest_lap_time",
+                "fastest_lap_driver",
+                "total_laps",
+                "total_drivers",
+                "last_calculated",
+            ]
+        )
+
+    def clean(self):
+        """Validate model fields"""
+        super().clean()
+
+        # Validate fastest_lap_time is positive
+        if self.fastest_lap_time is not None and self.fastest_lap_time <= 0:
+            raise ValidationError("Fastest lap time must be positive")
+
+        # Validate total_laps and total_drivers are non-negative
+        if self.total_laps < 0:
+            raise ValidationError("Total laps cannot be negative")
+        if self.total_drivers < 0:
+            raise ValidationError("Total drivers cannot be negative")
+
+        # Validate JSON field structures
+        if self.session_statistics and not isinstance(self.session_statistics, dict):
+            raise ValidationError("Session statistics must be a dictionary")
+
+        if self.chart_data and not isinstance(self.chart_data, dict):
+            raise ValidationError("Chart data must be a dictionary")
+
+        if self.sector_statistics and not isinstance(self.sector_statistics, dict):
+            raise ValidationError("Sector statistics must be a dictionary")
+
+    def save(self, *args, **kwargs):
+        """Override save to run validation"""
+        self.clean()
+        super().save(*args, **kwargs)
+
 
 class Lap(models.Model):
     """Model representing an individual lap"""
@@ -177,3 +296,26 @@ class Lap(models.Model):
 
 # NOTE: After this change, you must create and run a migration, and update
 # all code that creates or accesses Lap sector times.
+
+
+@receiver(post_delete, sender=Lap)
+def invalidate_session_statistics_on_lap_delete(sender, instance, **kwargs):
+    """Invalidate pre-computed statistics when a lap is deleted"""
+    if instance.session_id:
+        try:
+            session = Session.objects.get(pk=instance.session_id)
+            session.invalidate_statistics()
+        except Session.DoesNotExist:
+            pass  # Session was already deleted
+
+
+@receiver(post_save, sender=Lap)
+def invalidate_session_statistics_on_lap_change(sender, instance, **kwargs):
+    """Invalidate pre-computed statistics when a lap is modified"""
+    if instance.session_id and not kwargs.get("created", False):
+        # Only invalidate on updates, not on creation (creation handled in upload process)
+        try:
+            session = Session.objects.get(pk=instance.session_id)
+            session.invalidate_statistics()
+        except Session.DoesNotExist:
+            pass

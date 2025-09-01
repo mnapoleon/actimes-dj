@@ -15,6 +15,7 @@ from django.views.generic import (
 
 from .forms import JSONUploadForm, SessionEditForm
 from .models import Lap, Session
+from .statistics import SessionStatisticsCalculator
 
 
 class HomeView(ListView):
@@ -215,6 +216,9 @@ class HomeView(ListView):
                     cuts=lap_data.get("cuts", 0),
                 )
 
+            # Calculate and store pre-computed statistics for performance optimization
+            self._calculate_session_statistics(session)
+
             messages.success(self.request, f"Successfully uploaded session: {session}")
 
         except Exception as e:
@@ -265,6 +269,30 @@ class HomeView(ListView):
         except (json.JSONDecodeError, KeyError):
             return "Practice"
 
+    def _calculate_session_statistics(self, session):
+        """Calculate and store pre-computed statistics during ingestion"""
+        try:
+            calculator = SessionStatisticsCalculator(session)
+            stats = calculator.calculate_all_statistics()
+
+            # Update session with calculated statistics
+            session.session_statistics = stats["session_statistics"]
+            session.chart_data = stats["chart_data"]
+            session.sector_statistics = stats["sector_statistics"]
+            session.fastest_lap_time = stats["fastest_lap_time"]
+            session.fastest_lap_driver = stats["fastest_lap_driver"]
+            session.total_laps = stats["total_laps"]
+            session.total_drivers = stats["total_drivers"]
+
+            session.save()
+
+        except Exception as e:
+            # Log the error but don't fail the upload
+            print(
+                f"Warning: Failed to calculate statistics for session {session.id}: {e}"
+            )
+            # Statistics will be calculated later via management command or on-demand
+
 
 class SessionDetailView(ListView):
     """View for displaying detailed lap times for a specific session"""
@@ -308,182 +336,179 @@ class SessionDetailView(ListView):
         context = super().get_context_data(**kwargs)
         context["session"] = self.session
 
-        # Get all laps for the session (for chart)
+        # Use pre-computed statistics for optimal performance
+        context["driver_statistics"] = self._get_driver_statistics()
+        context["chart_data"] = self._get_chart_data()
+        context["fastest_lap_time"] = self._get_fastest_lap_time()
+
+        # Calculate best optimal time from pre-computed driver stats if needed
+        if context["driver_statistics"]:
+            optimal_times = [
+                stats["optimal_lap_time"]
+                for stats in context["driver_statistics"].values()
+                if stats.get("optimal_lap_time") is not None
+            ]
+            context["best_optimal_time"] = min(optimal_times) if optimal_times else None
+        else:
+            context["best_optimal_time"] = None
+
+        # Get basic session data that's still needed for templates
         all_laps = self.session.laps.all().order_by("lap_number")
         context["all_laps"] = all_laps
 
-        # Get unique drivers from the session
-        context["drivers"] = list(
-            self.session.laps.values_list("driver_name", flat=True)
-            .distinct()
-            .order_by("driver_name")
-        )
+        # Drivers list from pre-computed statistics or fallback to database
+        if context["driver_statistics"]:
+            context["drivers"] = list(context["driver_statistics"].keys())
+        else:
+            context["drivers"] = list(
+                self.session.laps.values_list("driver_name", flat=True)
+                .distinct()
+                .order_by("driver_name")
+            )
 
-        # Add driver lap counts for enhanced display
+        # Driver lap counts - use pre-computed data when available
         driver_lap_counts = {}
         for driver in context["drivers"]:
-            driver_lap_counts[driver] = all_laps.filter(driver_name=driver).count()
+            if driver in context["driver_statistics"]:
+                driver_lap_counts[driver] = context["driver_statistics"][driver][
+                    "lap_count"
+                ]
+            else:
+                # Fallback to database query
+                driver_lap_counts[driver] = all_laps.filter(driver_name=driver).count()
         context["driver_lap_counts"] = driver_lap_counts
 
-        # Add comprehensive driver statistics for the driver grid
-        driver_stats = self.session.get_driver_statistics()
-        context["driver_statistics"] = driver_stats
-
-        # Calculate fastest lap and best optimal lap across all drivers for highlighting
-        if driver_stats:
-            # Find fastest lap time across all drivers
-            fastest_lap_time = min(
-                stats["best_lap_time"] for stats in driver_stats.values()
-            )
-            context["fastest_lap_time"] = fastest_lap_time
-
-            # Find best optimal lap time across all drivers (excluding None values)
-            optimal_times = [
-                stats["optimal_lap_time"]
-                for stats in driver_stats.values()
-                if stats["optimal_lap_time"] is not None
-            ]
-            if optimal_times:
-                best_optimal_time = min(optimal_times)
-                context["best_optimal_time"] = best_optimal_time
-            else:
-                context["best_optimal_time"] = None
-
-        # Get unique lap numbers for chart labels
-        # Include all laps (including lap 0) for all session types
-        lap_filter = all_laps
-
+        # Chart data from pre-computed or fallback
         unique_lap_numbers = list(
-            lap_filter.values_list("lap_number", flat=True)
+            all_laps.values_list("lap_number", flat=True)
             .distinct()
             .order_by("lap_number")
         )
         context["unique_lap_numbers"] = unique_lap_numbers
 
-        # Prepare chart data for each driver
-        chart_data = {}
-        for driver in context["drivers"]:
-            chart_data[driver] = {}
-            for lap_number in unique_lap_numbers:
-                try:
-                    lap = all_laps.get(driver_name=driver, lap_number=lap_number)
-                    chart_data[driver][lap_number] = lap.total_time
-                except Lap.DoesNotExist:
-                    chart_data[driver][lap_number] = None
-        context["chart_data"] = chart_data
-        context["fastest_lap"] = self.session.get_fastest_lap()
+        # Fastest lap info - use pre-computed or fallback to database
+        fastest_lap_time = self._get_fastest_lap_time()
+        fastest_lap_driver = self._get_fastest_lap_driver()
 
-        # Determine the maximum number of sectors in any lap for this session
-        max_sectors = 0
-        for lap in all_laps:
-            if hasattr(lap, "sectors") and lap.sectors:
-                max_sectors = max(max_sectors, len(lap.sectors))
-        context["sector_count"] = max_sectors if max_sectors > 0 else 3
+        if fastest_lap_time:
+            # Create a mock fastest lap object for template compatibility
+            context["fastest_lap"] = type(
+                "MockLap",
+                (),
+                {
+                    "total_time": fastest_lap_time,
+                    "driver_name": fastest_lap_driver,
+                    "format_time": lambda: self._format_time(fastest_lap_time),
+                },
+            )()
+        else:
+            context["fastest_lap"] = None
 
-        # For each lap in the current page, build a sectors list
-        for lap in context["laps"]:
+        # Use pre-computed sector statistics for highlighting
+        sector_stats = self._get_sector_statistics()
+        context["sector_count"] = sector_stats.get("sector_count", 3)
+        context["sector_highlights"] = sector_stats.get("sector_highlights", {})
+
+        # Lap highlights from pre-computed data
+        lap_highlights = sector_stats.get("lap_highlights", {})
+        context["fastest_total"] = lap_highlights.get("fastest_total")
+        context["slowest_total"] = lap_highlights.get("slowest_total")
+
+        # For each lap in the current page, build a sectors list and attach highlighting
+        laps = context["laps"]
+        driver_pb_total = lap_highlights.get("driver_pb_total", {})
+        driver_pb_sectors = sector_stats.get("driver_pb_sectors", {})
+
+        for lap in laps:
+            # Ensure sectors are a list
             if hasattr(lap, "sectors") and lap.sectors:
                 lap.sectors = list(lap.sectors)
             else:
                 lap.sectors = []
 
-        # Row-level highlighting for total time (fastest, slowest, pb) - exclude out laps
-        laps = context["laps"]
-        if laps:
-            # Filter out laps (lap_number = 0) for best/worst calculations
-            racing_laps = [lap for lap in all_laps if lap.lap_number > 0]
-            if racing_laps:
-                context["fastest_total"] = min(lap.total_time for lap in racing_laps)
-                context["slowest_total"] = max(lap.total_time for lap in racing_laps)
-            else:
-                # Fallback if no racing laps (only out laps)
-                context["fastest_total"] = min(lap.total_time for lap in all_laps)
-                context["slowest_total"] = max(lap.total_time for lap in all_laps)
+            # Attach personal best flag
+            lap.is_pb_total = (
+                lap.driver_name in driver_pb_total
+                and lap.total_time == driver_pb_total[lap.driver_name]
+                and lap.lap_number > 0  # Only racing laps can be PB
+            )
 
-            # Personal best per driver - exclude out laps
-            driver_pb_total = {}
-            for driver in context["drivers"]:
-                driver_racing_laps = [
-                    lap
-                    for lap in all_laps
-                    if lap.driver_name == driver and lap.lap_number > 0
-                ]
-                if driver_racing_laps:
-                    driver_pb_total[driver] = min(
-                        lap.total_time for lap in driver_racing_laps
-                    )
-            for lap in laps:
-                lap.is_pb_total = (
-                    driver_pb_total.get(lap.driver_name) is not None
-                    and lap.total_time == driver_pb_total[lap.driver_name]
-                    and lap.lap_number > 0  # Only racing laps can be PB
-                )
-
-        # Calculate sector highlights: fastest, slowest, and pb per driver - exclude out laps
-        sector_highlights = {}
-        # Fastest and slowest overall for each sector - exclude out laps
-        for idx in range(context["sector_count"]):
-            racing_sector_times = [
-                lap.sectors[idx]
-                for lap in all_laps
-                if len(lap.sectors) > idx and lap.lap_number > 0
-            ]
-            if racing_sector_times:
-                sector_highlights[idx] = {
-                    "fastest": min(racing_sector_times),
-                    "slowest": max(racing_sector_times),
-                    "pb": None,  # Will be set per lap below
-                }
-            else:
-                # Fallback if no racing laps (only out laps)
-                all_sector_times = [
-                    lap.sectors[idx] for lap in all_laps if len(lap.sectors) > idx
-                ]
-                if all_sector_times:
-                    sector_highlights[idx] = {
-                        "fastest": min(all_sector_times),
-                        "slowest": max(all_sector_times),
-                        "pb": None,
-                    }
-
-        # Personal best per driver for each sector - exclude out laps
-        # Build a dict: {driver: {sector_idx: pb_time}}
-        driver_pb = {driver: {} for driver in context["drivers"]}
-        for driver in context["drivers"]:
-            driver_racing_laps = [
-                lap
-                for lap in all_laps
-                if lap.driver_name == driver and lap.lap_number > 0
-            ]
-            for idx in range(context["sector_count"]):
-                racing_sector_times = [
-                    lap.sectors[idx]
-                    for lap in driver_racing_laps
-                    if len(lap.sectors) > idx
-                ]
-                if racing_sector_times:
-                    driver_pb[driver][idx] = min(racing_sector_times)
-
-        # Attach per-lap sector highlight info for template
-        for lap in context["laps"]:
+            # Attach sector highlight information
             lap.sector_highlights = {}
             for idx in range(context["sector_count"]):
+                # Convert integer index to string for lookup
+                idx_str = str(idx)
                 lap.sector_highlights[idx] = {
-                    "fastest": (
-                        sector_highlights[idx]["fastest"]
-                        if idx in sector_highlights
-                        else None
-                    ),
-                    "slowest": (
-                        sector_highlights[idx]["slowest"]
-                        if idx in sector_highlights
-                        else None
-                    ),
-                    "pb": driver_pb.get(lap.driver_name, {}).get(idx),
+                    "fastest": context["sector_highlights"]
+                    .get(idx_str, {})
+                    .get("fastest"),
+                    "slowest": context["sector_highlights"]
+                    .get(idx_str, {})
+                    .get("slowest"),
+                    "pb": driver_pb_sectors.get(lap.driver_name, {}).get(idx_str),
                 }
 
-        context["sector_highlights"] = sector_highlights
         return context
+
+    def _get_driver_statistics(self):
+        """Get driver statistics using pre-computed data with fallback"""
+        if self.session.session_statistics:
+            return self.session.session_statistics
+
+        # Fallback to on-demand calculation if pre-computed data not available
+        return self.session.get_or_calculate_driver_statistics()
+
+    def _get_chart_data(self):
+        """Get chart data using pre-computed data with fallback"""
+        if self.session.chart_data:
+            return self.session.chart_data
+
+        # Fallback to on-demand calculation
+        from .statistics import SessionStatisticsCalculator
+
+        calculator = SessionStatisticsCalculator(self.session)
+        return calculator.calculate_chart_data()
+
+    def _get_sector_statistics(self):
+        """Get sector statistics using pre-computed data with fallback"""
+        if self.session.sector_statistics:
+            return self.session.sector_statistics
+
+        # Fallback to on-demand calculation
+        from .statistics import SessionStatisticsCalculator
+
+        calculator = SessionStatisticsCalculator(self.session)
+        return calculator.calculate_sector_statistics()
+
+    def _get_fastest_lap_time(self):
+        """Get fastest lap time using pre-computed data with fallback"""
+        if self.session.fastest_lap_time:
+            return self.session.fastest_lap_time
+
+        # Fallback to database query
+        fastest_lap = (
+            self.session.laps.filter(lap_number__gt=0).order_by("total_time").first()
+        )
+        return fastest_lap.total_time if fastest_lap else None
+
+    def _get_fastest_lap_driver(self):
+        """Get fastest lap driver using pre-computed data with fallback"""
+        if self.session.fastest_lap_driver:
+            return self.session.fastest_lap_driver
+
+        # Fallback to database query
+        fastest_lap = (
+            self.session.laps.filter(lap_number__gt=0).order_by("total_time").first()
+        )
+        return fastest_lap.driver_name if fastest_lap else ""
+
+    def _format_time(self, time_seconds):
+        """Format time as MM:SS.mmm for template compatibility"""
+        if time_seconds is None:
+            return "N/A"
+        minutes = int(time_seconds // 60)
+        seconds = time_seconds % 60
+        return f"{minutes}:{seconds:06.3f}"
 
 
 class SessionEditView(UpdateView):
@@ -497,6 +522,23 @@ class SessionEditView(UpdateView):
     def get_success_url(self):
         messages.success(self.request, f'Session "{self.object}" updated successfully!')
         return reverse("session_detail", kwargs={"pk": self.object.pk})
+
+    def form_valid(self, form):
+        """Handle successful form submission"""
+        response = super().form_valid(form)
+
+        # Note: Session metadata editing (name, track, car, date) doesn't affect
+        # lap-based statistics, so no recalculation is needed.
+        # If we add editing of lap data in the future, we would recalculate here:
+        #
+        # try:
+        #     calculator = SessionStatisticsCalculator(self.object)
+        #     stats = calculator.calculate_all_statistics()
+        #     # Update session with recalculated statistics...
+        # except Exception as e:
+        #     messages.warning(self.request, f"Statistics recalculation failed: {e}")
+
+        return response
 
 
 class SessionDeleteView(DeleteView):
@@ -546,6 +588,28 @@ class DriverDeleteView(TemplateView):
 
         if lap_count > 0:
             laps_to_delete.delete()
+
+            # Explicitly recalculate statistics after driver deletion
+            try:
+                calculator = SessionStatisticsCalculator(session)
+                stats = calculator.calculate_all_statistics()
+
+                # Update session with recalculated statistics
+                session.session_statistics = stats["session_statistics"]
+                session.chart_data = stats["chart_data"]
+                session.sector_statistics = stats["sector_statistics"]
+                session.fastest_lap_time = stats["fastest_lap_time"]
+                session.fastest_lap_driver = stats["fastest_lap_driver"]
+                session.total_laps = stats["total_laps"]
+                session.total_drivers = stats["total_drivers"]
+                session.save()
+
+            except Exception as e:
+                # Log error but don't fail the deletion
+                print(
+                    f"Warning: Failed to recalculate statistics after driver deletion: {e}"
+                )
+
             messages.success(
                 request,
                 f'Successfully removed driver "{driver_name}" and all {lap_count} lap{"" if lap_count == 1 else "s"} from this session.',
