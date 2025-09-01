@@ -504,6 +504,23 @@ class SessionEditView(UpdateView):
     def get_success_url(self):
         messages.success(self.request, f'Session "{self.object}" updated successfully!')
         return reverse("session_detail", kwargs={"pk": self.object.pk})
+    
+    def form_valid(self, form):
+        """Handle successful form submission"""
+        response = super().form_valid(form)
+        
+        # Note: Session metadata editing (name, track, car, date) doesn't affect
+        # lap-based statistics, so no recalculation is needed.
+        # If we add editing of lap data in the future, we would recalculate here:
+        # 
+        # try:
+        #     calculator = SessionStatisticsCalculator(self.object)
+        #     stats = calculator.calculate_all_statistics()
+        #     # Update session with recalculated statistics...
+        # except Exception as e:
+        #     messages.warning(self.request, f"Statistics recalculation failed: {e}")
+        
+        return response
 
 
 class SessionDeleteView(DeleteView):
@@ -553,6 +570,26 @@ class DriverDeleteView(TemplateView):
 
         if lap_count > 0:
             laps_to_delete.delete()
+            
+            # Explicitly recalculate statistics after driver deletion
+            try:
+                calculator = SessionStatisticsCalculator(session)
+                stats = calculator.calculate_all_statistics()
+                
+                # Update session with recalculated statistics
+                session.session_statistics = stats['session_statistics']
+                session.chart_data = stats['chart_data']
+                session.sector_statistics = stats['sector_statistics']
+                session.fastest_lap_time = stats['fastest_lap_time']
+                session.fastest_lap_driver = stats['fastest_lap_driver']
+                session.total_laps = stats['total_laps']
+                session.total_drivers = stats['total_drivers']
+                session.save()
+                
+            except Exception as e:
+                # Log error but don't fail the deletion
+                print(f"Warning: Failed to recalculate statistics after driver deletion: {e}")
+            
             messages.success(
                 request,
                 f'Successfully removed driver "{driver_name}" and all {lap_count} lap{"" if lap_count == 1 else "s"} from this session.',
