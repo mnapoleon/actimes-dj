@@ -5,7 +5,7 @@ import json
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
-from ..models import Lap, Session
+from ..models import Car, Lap, Session, Track
 
 
 class BaseTestCase(TestCase):
@@ -13,10 +13,17 @@ class BaseTestCase(TestCase):
 
     def setUp(self):
         """Set up common test data."""
+        # Create test track and car
+        self.test_track = Track.objects.create(
+            code="test_track", display_name="Test Track"
+        )
+        self.test_car = Car.objects.create(code="test_car", display_name="Test Car")
+
+        # Create test session
         self.session = Session.objects.create(
             session_name="Test Session",
-            track="Test Track",
-            car="Test Car",
+            track=self.test_track,
+            car=self.test_car,
             session_type="Practice",
             file_name="test.json",
             players_data=[{"name": "Test Driver", "car": "Test Car"}],
@@ -36,6 +43,42 @@ class BaseTestCase(TestCase):
         }
         defaults.update(kwargs)
         return Lap.objects.create(**defaults)
+
+    def create_test_track(self, **kwargs):
+        """Helper to create test track with default values."""
+        defaults = {
+            "code": "test_track_code",
+            "display_name": "Test Track Name",
+        }
+        defaults.update(kwargs)
+        return Track.objects.create(**defaults)
+
+    def create_test_car(self, **kwargs):
+        """Helper to create test car with default values."""
+        defaults = {
+            "code": "test_car_code",
+            "display_name": "Test Car Name",
+        }
+        defaults.update(kwargs)
+        return Car.objects.create(**defaults)
+
+    def create_test_session(self, track=None, car=None, **kwargs):
+        """Helper to create test session with default values."""
+        if track is None:
+            track = self.test_track
+        if car is None:
+            car = self.test_car
+
+        defaults = {
+            "session_name": "Test Session",
+            "track": track,
+            "car": car,
+            "session_type": "Practice",
+            "file_name": "test.json",
+            "players_data": [{"name": "Test Driver", "car": "Test Car"}],
+        }
+        defaults.update(kwargs)
+        return Session.objects.create(**defaults)
 
     def create_test_json_file(self, filename="test.json", content=None):
         """Helper to create test JSON file for upload."""

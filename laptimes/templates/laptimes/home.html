@@ -75,8 +75,8 @@
                         <select name="track" id="trackSelect" class="form-select">
                             <option value="all" {% if current_filters.track == 'all' %}selected{% endif %}>All Tracks</option>
                             {% for track in tracks %}
-                                <option value="{{ track }}" {% if track == current_filters.track %}selected{% endif %}>
-                                    {{ track }}
+                                <option value="{{ track.id }}" {% if track.id|stringformat:'s' == current_filters.track %}selected{% endif %}>
+                                    {{ track.get_display_name }}
                                 </option>
                             {% endfor %}
                         </select>
@@ -88,8 +88,8 @@
                         <select name="car" id="carSelect" class="form-select">
                             <option value="all" {% if current_filters.car == 'all' %}selected{% endif %}>All Cars</option>
                             {% for car in cars %}
-                                <option value="{{ car }}" {% if car == current_filters.car %}selected{% endif %}>
-                                    {{ car }}
+                                <option value="{{ car.id }}" {% if car.id|stringformat:'s' == current_filters.car %}selected{% endif %}>
+                                    {{ car.get_display_name }}
                                 </option>
                             {% endfor %}
                         </select>
