@@ -5,7 +5,6 @@ This module contains all the logic for calculating pre-computed statistics
 that were previously calculated on-demand in views and models.
 """
 
-from django.db.models import Max
 from .models import Lap
 
 
@@ -14,22 +13,22 @@ class SessionStatisticsCalculator:
     Calculator for session statistics that can be pre-computed during ingestion
     and stored in the database for performance optimization.
     """
-    
+
     def __init__(self, session):
         self.session = session
-    
+
     def calculate_all_statistics(self):
         """Calculate and return all statistics for the session"""
         return {
-            'session_statistics': self.calculate_driver_statistics(),
-            'chart_data': self.calculate_chart_data(),
-            'sector_statistics': self.calculate_sector_statistics(),
-            'fastest_lap_time': self.calculate_fastest_lap_time(),
-            'fastest_lap_driver': self.calculate_fastest_lap_driver(),
-            'total_laps': self.calculate_total_laps(),
-            'total_drivers': self.calculate_total_drivers(),
+            "session_statistics": self.calculate_driver_statistics(),
+            "chart_data": self.calculate_chart_data(),
+            "sector_statistics": self.calculate_sector_statistics(),
+            "fastest_lap_time": self.calculate_fastest_lap_time(),
+            "fastest_lap_driver": self.calculate_fastest_lap_driver(),
+            "total_laps": self.calculate_total_laps(),
+            "total_drivers": self.calculate_total_drivers(),
         }
-    
+
     def calculate_driver_statistics(self):
         """
         Calculate comprehensive driver statistics.
@@ -99,7 +98,9 @@ class SessionStatisticsCalculator:
         Calculate optimal lap time (sum of best sectors) for a driver - exclude out laps.
         Extracted from Session.get_optimal_lap_time()
         """
-        driver_laps = self.session.laps.filter(driver_name=driver_name, lap_number__gt=0)
+        driver_laps = self.session.laps.filter(
+            driver_name=driver_name, lap_number__gt=0
+        )
         if not driver_laps.exists():
             return None
 
@@ -132,7 +133,7 @@ class SessionStatisticsCalculator:
         """
         all_laps = self.session.laps.all().order_by("lap_number")
         drivers = self.session.laps.values_list("driver_name", flat=True).distinct()
-        
+
         unique_lap_numbers = list(
             all_laps.values_list("lap_number", flat=True)
             .distinct()
@@ -150,7 +151,7 @@ class SessionStatisticsCalculator:
                     chart_data[driver][lap_number] = lap.total_time
                 except Lap.DoesNotExist:
                     chart_data[driver][lap_number] = None
-        
+
         return chart_data
 
     def calculate_sector_statistics(self):
@@ -160,7 +161,7 @@ class SessionStatisticsCalculator:
         """
         all_laps = self.session.laps.all().order_by("lap_number")
         drivers = self.session.laps.values_list("driver_name", flat=True).distinct()
-        
+
         # Determine the maximum number of sectors
         max_sectors = 0
         for lap in all_laps:
@@ -171,13 +172,11 @@ class SessionStatisticsCalculator:
         # Calculate sector highlights: fastest, slowest, and pb per driver - exclude out laps
         sector_highlights = {}
         racing_laps = [lap for lap in all_laps if lap.lap_number > 0]
-        
+
         # Fastest and slowest overall for each sector - exclude out laps
         for idx in range(sector_count):
             racing_sector_times = [
-                lap.sectors[idx]
-                for lap in racing_laps
-                if len(lap.sectors) > idx
+                lap.sectors[idx] for lap in racing_laps if len(lap.sectors) > idx
             ]
             if racing_sector_times:
                 sector_highlights[idx] = {
@@ -199,9 +198,7 @@ class SessionStatisticsCalculator:
         driver_pb_sectors = {driver: {} for driver in drivers}
         for driver in drivers:
             driver_racing_laps = [
-                lap
-                for lap in racing_laps
-                if lap.driver_name == driver
+                lap for lap in racing_laps if lap.driver_name == driver
             ]
             for idx in range(sector_count):
                 racing_sector_times = [
@@ -218,16 +215,18 @@ class SessionStatisticsCalculator:
             slowest_total = max(lap.total_time for lap in racing_laps)
         else:
             # Fallback if no racing laps (only out laps)
-            fastest_total = min(lap.total_time for lap in all_laps) if all_laps else None
-            slowest_total = max(lap.total_time for lap in all_laps) if all_laps else None
+            fastest_total = (
+                min(lap.total_time for lap in all_laps) if all_laps else None
+            )
+            slowest_total = (
+                max(lap.total_time for lap in all_laps) if all_laps else None
+            )
 
         # Personal best per driver - exclude out laps
         driver_pb_total = {}
         for driver in drivers:
             driver_racing_laps = [
-                lap
-                for lap in racing_laps
-                if lap.driver_name == driver
+                lap for lap in racing_laps if lap.driver_name == driver
             ]
             if driver_racing_laps:
                 driver_pb_total[driver] = min(
@@ -247,12 +246,16 @@ class SessionStatisticsCalculator:
 
     def calculate_fastest_lap_time(self):
         """Calculate the fastest lap time in the session (excluding out laps)"""
-        fastest_lap = self.session.laps.filter(lap_number__gt=0).order_by('total_time').first()
+        fastest_lap = (
+            self.session.laps.filter(lap_number__gt=0).order_by("total_time").first()
+        )
         return fastest_lap.total_time if fastest_lap else None
 
     def calculate_fastest_lap_driver(self):
         """Calculate the driver with the fastest lap time (excluding out laps)"""
-        fastest_lap = self.session.laps.filter(lap_number__gt=0).order_by('total_time').first()
+        fastest_lap = (
+            self.session.laps.filter(lap_number__gt=0).order_by("total_time").first()
+        )
         return fastest_lap.driver_name if fastest_lap else ""
 
     def calculate_total_laps(self):
@@ -261,4 +264,6 @@ class SessionStatisticsCalculator:
 
     def calculate_total_drivers(self):
         """Calculate total number of unique drivers in the session"""
-        return self.session.laps.values_list('driver_name', flat=True).distinct().count()
+        return (
+            self.session.laps.values_list("driver_name", flat=True).distinct().count()
+        )
