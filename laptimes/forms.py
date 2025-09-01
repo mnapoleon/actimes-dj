@@ -9,6 +9,62 @@ from django.utils.html import format_html
 from .models import Session
 
 
+class MultipleFileInput(forms.ClearableFileInput):
+    """Custom widget that supports multiple file uploads"""
+    
+    allow_multiple_selected = True
+    
+    def __init__(self, attrs=None):
+        super().__init__(attrs)
+        if attrs is None:
+            attrs = {}
+        attrs['multiple'] = True
+        self.attrs.update(attrs)
+        
+    def value_from_datadict(self, data, files, name):
+        """Return a list of files for multiple file upload"""
+        if hasattr(files, 'getlist'):
+            return files.getlist(name)
+        else:
+            file_data = files.get(name)
+            if isinstance(file_data, list):
+                return file_data
+            elif file_data:
+                return [file_data]
+            else:
+                return []
+
+
+class MultipleFileField(forms.FileField):
+    """Custom field that handles multiple file uploads"""
+    
+    widget = MultipleFileInput
+    
+    def to_python(self, data):
+        """Convert the uploaded data to a list of files"""
+        if data in self.empty_values:
+            return []
+        elif not isinstance(data, list):
+            data = [data]
+            
+        files = []
+        for item in data:
+            if item in self.empty_values:
+                continue
+            # Call parent's to_python for each file
+            files.append(super().to_python(item))
+        
+        return files
+        
+    def validate(self, value):
+        """Validate the list of files"""
+        if not value and self.required:
+            raise ValidationError(self.error_messages['required'], code='required')
+        
+        for file_obj in value:
+            super().validate(file_obj)
+
+
 class SessionEditForm(forms.ModelForm):
     """Form for editing session information"""
 
@@ -138,80 +194,129 @@ class SessionEditForm(forms.ModelForm):
 
 
 class JSONUploadForm(forms.Form):
-    """Form for uploading JSON race data files"""
+    """Form for uploading JSON race data files or directories"""
 
-    json_file = forms.FileField(
-        label="Race Data File",
-        help_text="Upload a JSON file containing race session data",
-        widget=forms.FileInput(attrs={"class": "form-control", "accept": ".json"}),
+    json_files = MultipleFileField(
+        label="Race Data Files",
+        help_text="Upload JSON files containing race session data (supports multiple files or directories)",
+        widget=MultipleFileInput(attrs={
+            "class": "form-control", 
+            "accept": ".json",
+            "webkitdirectory": False,  # Will be toggled via JavaScript
+        }),
+        required=False,
+    )
+    
+    upload_type = forms.ChoiceField(
+        choices=[
+            ('files', 'Upload Files'),
+            ('directory', 'Upload Directory')
+        ],
+        initial='files',
+        widget=forms.RadioSelect(attrs={"class": "form-check-input"}),
+        help_text="Choose whether to upload individual files or an entire directory"
     )
 
-    def clean_json_file(self):
-        """Validate uploaded file is valid JSON with expected structure"""
-        file = self.cleaned_data["json_file"]
+    def clean_json_files(self):
+        """Validate uploaded files are valid JSON with expected structure"""
+        files = self.cleaned_data.get('json_files', [])
+        
+        if not files:
+            raise ValidationError("Please select at least one file to upload")
 
-        if not file.name.endswith(".json"):
-            raise ValidationError("File must have .json extension")
+        validated_files = []
+        errors = []
 
-        try:
-            # Read and parse JSON content
-            file.seek(0)  # Reset file pointer
-            content = file.read().decode("utf-8")
-            data = json.loads(content)
+        for file in files:
+            try:
+                # Check file extension
+                if not file.name.endswith(".json"):
+                    errors.append(f"{file.name}: File must have .json extension")
+                    continue
 
-            # Validate basic structure
-            required_fields = ["track", "players", "sessions"]
-            for field in required_fields:
-                if field not in data:
-                    raise ValidationError(f"JSON file missing required field: {field}")
+                # Read and parse JSON content
+                file.seek(0)  # Reset file pointer
+                content = file.read().decode("utf-8")
+                data = json.loads(content)
 
-            # Validate that players is a list
-            if not isinstance(data["players"], list):
-                raise ValidationError("Players data must be a list")
+                # Validate basic structure
+                required_fields = ["track", "players", "sessions"]
+                for field in required_fields:
+                    if field not in data:
+                        errors.append(f"{file.name}: Missing required field '{field}'")
+                        break
+                else:
+                    # Validate that players is a list
+                    if not isinstance(data["players"], list):
+                        errors.append(f"{file.name}: Players data must be a list")
+                        continue
 
-            # Validate that sessions is a list and has at least one session
-            if not isinstance(data["sessions"], list) or len(data["sessions"]) == 0:
-                raise ValidationError(
-                    "Sessions data must be a list with at least one session"
-                )
+                    # Validate that sessions is a list and has at least one session
+                    if not isinstance(data["sessions"], list) or len(data["sessions"]) == 0:
+                        errors.append(f"{file.name}: Sessions data must be a list with at least one session")
+                        continue
 
-            # Validate that the first session has laps
-            if "laps" not in data["sessions"][0]:
-                raise ValidationError("Session data missing laps field")
+                    # Validate that the first session has laps
+                    if "laps" not in data["sessions"][0]:
+                        errors.append(f"{file.name}: Session data missing laps field")
+                        continue
 
-            if not isinstance(data["sessions"][0]["laps"], list):
-                raise ValidationError("Session laps data must be a list")
+                    if not isinstance(data["sessions"][0]["laps"], list):
+                        errors.append(f"{file.name}: Session laps data must be a list")
+                        continue
 
-            # Generate file hash for duplicate detection
-            file_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+                    # Generate file hash for duplicate detection
+                    file_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
 
-            # Check for duplicate hash
-            if Session.objects.filter(file_hash=file_hash).exists():
-                existing_session = Session.objects.get(file_hash=file_hash)
-                session_url = reverse(
-                    "session_detail", kwargs={"pk": existing_session.pk}
-                )
+                    # Check for duplicate hash
+                    if Session.objects.filter(file_hash=file_hash).exists():
+                        existing_session = Session.objects.get(file_hash=file_hash)
+                        session_url = reverse(
+                            "session_detail", kwargs={"pk": existing_session.pk}
+                        )
 
-                error_message = format_html(
-                    "This file has already been uploaded. "
-                    'Existing session: <a href="{}" target="_blank">"{}"</a> '
-                    "(uploaded on {}). "
-                    "Click the link to view the existing session or upload a different file.",
-                    session_url,
-                    existing_session,
-                    existing_session.upload_date.strftime("%Y-%m-%d at %H:%M"),
-                )
-                raise ValidationError(error_message)
+                        error_message = format_html(
+                            "{}: Already uploaded. "
+                            'Existing session: <a href="{}" target="_blank">"{}"</a> '
+                            "(uploaded on {})",
+                            file.name,
+                            session_url,
+                            existing_session,
+                            existing_session.upload_date.strftime("%Y-%m-%d at %H:%M"),
+                        )
+                        errors.append(error_message)
+                        continue
 
-            # Store hash for later use in the view
-            file._file_hash = file_hash
+                    # Store hash for later use in the view
+                    file._file_hash = file_hash
 
-            # Reset file pointer for later use
-            file.seek(0)
+                    # Reset file pointer for later use
+                    file.seek(0)
+                    validated_files.append(file)
 
-        except json.JSONDecodeError:
-            raise ValidationError("Invalid JSON file format")
-        except UnicodeDecodeError:
-            raise ValidationError("File encoding not supported")
+            except json.JSONDecodeError:
+                errors.append(f"{file.name}: Invalid JSON file format")
+            except UnicodeDecodeError:
+                errors.append(f"{file.name}: File encoding not supported")
+            except Exception as e:
+                errors.append(f"{file.name}: Error processing file - {str(e)}")
 
-        return file
+        if errors:
+            raise ValidationError(errors)
+
+        if not validated_files:
+            raise ValidationError("No valid JSON files found")
+
+        return validated_files
+
+    def clean(self):
+        """Additional form validation"""
+        cleaned_data = super().clean()
+        upload_type = cleaned_data.get("upload_type")
+        
+        # Check if files are provided (the custom field handles this, but double-check)
+        json_files = cleaned_data.get('json_files', [])
+        if not json_files:
+            raise ValidationError("Please select files to upload")
+            
+        return cleaned_data

@@ -56,7 +56,7 @@ class IntegrationTests(TestCase):
         )
 
         # Upload the file
-        upload_response = self.client.post(reverse("home"), {"json_file": json_file})
+        upload_response = self.client.post(reverse("home"), {"json_files": json_file, "upload_type": "files"})
         self.assertEqual(upload_response.status_code, 302)
 
         # Verify session was created

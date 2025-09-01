@@ -159,70 +159,92 @@ class HomeView(ListView):
             return self.render_to_response(context)
 
     def _process_upload(self, form):
-        """Process uploaded JSON file and create Session/Lap objects"""
-        json_file = form.cleaned_data["json_file"]
-        try:
-            # Parse JSON content
-            content = json_file.read().decode("utf-8")
-            data = json.loads(content)
+        """Process uploaded JSON files and create Session/Lap objects"""
+        json_files = form.cleaned_data["json_files"]
+        upload_results = {
+            'successful': 0,
+            'failed': 0,
+            'errors': []
+        }
 
-            # Get the first session data
-            session_data = data["sessions"][0]
+        for json_file in json_files:
+            try:
+                # Parse JSON content
+                content = json_file.read().decode("utf-8")
+                data = json.loads(content)
 
-            # Extract session type using helper method
-            session_type = self._extract_session_type(data, session_data)
+                # Get the first session data
+                session_data = data["sessions"][0]
 
-            # Get car model from the first player (assuming all use same car)
-            car_model = "Unknown"
-            if data["players"] and len(data["players"]) > 0:
-                car_model = data["players"][0].get("car", "Unknown")
+                # Extract session type using helper method
+                session_type = self._extract_session_type(data, session_data)
 
-            # Use the file upload time as the default upload_date
-            from django.utils import timezone
+                # Get car model from the first player (assuming all use same car)
+                car_model = "Unknown"
+                if data["players"] and len(data["players"]) > 0:
+                    car_model = data["players"][0].get("car", "Unknown")
 
-            upload_date = timezone.now()
+                # Use the file upload time as the default upload_date
+                from django.utils import timezone
 
-            # Create Session object
-            session = Session.objects.create(
-                track=data["track"],
-                car=car_model,
-                session_type=session_type,
-                file_name=json_file.name,
-                players_data=data["players"],
-                upload_date=upload_date,
-                file_hash=getattr(json_file, "_file_hash", None),
-            )
+                upload_date = timezone.now()
 
-            # Create Lap objects from session laps
-            for lap_data in session_data["laps"]:
-                # Get driver name from car index
-                car_index = lap_data.get("car", 0)
-                driver_name = "Unknown"
-                if car_index < len(data["players"]):
-                    driver_name = data["players"][car_index].get("name", "Unknown")
-
-                # Extract sector times (convert from milliseconds to seconds)
-                sectors_raw = lap_data.get("sectors", [])
-                sectors = [(s / 1000.0) for s in sectors_raw]
-
-                Lap.objects.create(
-                    session=session,
-                    lap_number=lap_data.get("lap", 0),
-                    driver_name=driver_name,
-                    car_index=car_index,
-                    total_time=lap_data.get("time", 0) / 1000.0,  # ms to sec
-                    sectors=sectors,
-                    tyre_compound=lap_data.get("tyre", "Unknown"),
-                    cuts=lap_data.get("cuts", 0),
+                # Create Session object
+                session = Session.objects.create(
+                    track=data["track"],
+                    car=car_model,
+                    session_type=session_type,
+                    file_name=json_file.name,
+                    players_data=data["players"],
+                    upload_date=upload_date,
+                    file_hash=getattr(json_file, "_file_hash", None),
                 )
 
-            # Calculate and store pre-computed statistics for performance optimization
-            self._calculate_session_statistics(session)
+                # Create Lap objects from session laps
+                for lap_data in session_data["laps"]:
+                    # Get driver name from car index
+                    car_index = lap_data.get("car", 0)
+                    driver_name = "Unknown"
+                    if car_index < len(data["players"]):
+                        driver_name = data["players"][car_index].get("name", "Unknown")
 
-            messages.success(self.request, f"Successfully uploaded session: {session}")
+                    # Extract sector times (convert from milliseconds to seconds)
+                    sectors_raw = lap_data.get("sectors", [])
+                    sectors = [(s / 1000.0) for s in sectors_raw]
 
-        except Exception as e:
-            messages.error(self.request, f"Error processing file: {str(e)}")
+                    Lap.objects.create(
+                        session=session,
+                        lap_number=lap_data.get("lap", 0),
+                        driver_name=driver_name,
+                        car_index=car_index,
+                        total_time=lap_data.get("time", 0) / 1000.0,  # ms to sec
+                        sectors=sectors,
+                        tyre_compound=lap_data.get("tyre", "Unknown"),
+                        cuts=lap_data.get("cuts", 0),
+                    )
+
+                # Calculate and store pre-computed statistics for performance optimization
+                self._calculate_session_statistics(session)
+
+                upload_results['successful'] += 1
+
+            except Exception as e:
+                upload_results['failed'] += 1
+                upload_results['errors'].append(f"{json_file.name}: {str(e)}")
+
+        # Display summary messages
+        if upload_results['successful'] > 0:
+            if upload_results['successful'] == 1:
+                messages.success(self.request, "Successfully uploaded 1 session.")
+            else:
+                messages.success(self.request, f"Successfully uploaded {upload_results['successful']} sessions.")
+
+        if upload_results['failed'] > 0:
+            if upload_results['failed'] == 1:
+                messages.error(self.request, f"Failed to upload 1 file: {upload_results['errors'][0]}")
+            else:
+                error_list = "<ul>" + "".join([f"<li>{error}</li>" for error in upload_results['errors']]) + "</ul>"
+                messages.error(self.request, f"Failed to upload {upload_results['failed']} files: {error_list}")
 
         return redirect("home")
 

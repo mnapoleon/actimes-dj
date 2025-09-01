@@ -106,7 +106,7 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        response = self.client.post(reverse("home"), {"json_file": uploaded_file})
+        response = self.client.post(reverse("home"), {"json_files": uploaded_file, "upload_type": "files"})
 
         # Should redirect on success
         self.assertEqual(response.status_code, 302)
@@ -127,7 +127,7 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        response1 = self.client.post(reverse("home"), {"json_file": uploaded_file1})
+        response1 = self.client.post(reverse("home"), {"json_files": uploaded_file1, "upload_type": "files"})
         self.assertEqual(response1.status_code, 302)  # Success
         self.assertEqual(Session.objects.count(), 1)
 
@@ -138,14 +138,14 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        response2 = self.client.post(reverse("home"), {"json_file": uploaded_file2})
+        response2 = self.client.post(reverse("home"), {"json_files": uploaded_file2, "upload_type": "files"})
 
         # Should not create duplicate session
         self.assertEqual(Session.objects.count(), 1)
 
         # Should show the form with errors (status 200, not redirect)
         self.assertEqual(response2.status_code, 200)
-        self.assertContains(response2, "already been uploaded")
+        self.assertContains(response2, "Already uploaded")
 
     def test_different_files_same_content_detection(self):
         """Test that files with identical content are detected as duplicates"""
@@ -158,7 +158,7 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        response1 = self.client.post(reverse("home"), {"json_file": uploaded_file1})
+        response1 = self.client.post(reverse("home"), {"json_files": uploaded_file1, "upload_type": "files"})
         self.assertEqual(response1.status_code, 302)
 
         # Upload same content with different filename
@@ -168,7 +168,7 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        self.client.post(reverse("home"), {"json_file": uploaded_file2})
+        self.client.post(reverse("home"), {"json_files": uploaded_file2, "upload_type": "files"})
 
         # Should only have one session
         self.assertEqual(Session.objects.count(), 1)
@@ -183,7 +183,7 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        response1 = self.client.post(reverse("home"), {"json_file": uploaded_file1})
+        response1 = self.client.post(reverse("home"), {"json_files": uploaded_file1, "upload_type": "files"})
         self.assertEqual(response1.status_code, 302)
 
         # Second file with different content
@@ -197,7 +197,7 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        response2 = self.client.post(reverse("home"), {"json_file": uploaded_file2})
+        response2 = self.client.post(reverse("home"), {"json_files": uploaded_file2, "upload_type": "files"})
         self.assertEqual(response2.status_code, 302)
 
         # Should have two different sessions
@@ -219,7 +219,7 @@ class DuplicateFileTests(TestCase):
         )
 
         # Upload first time through view to create session
-        self.client.post(reverse("home"), {"json_file": uploaded_file1})
+        self.client.post(reverse("home"), {"json_files": uploaded_file1, "upload_type": "files"})
 
         # Now test form validation directly
         uploaded_file2 = SimpleUploadedFile(
@@ -228,12 +228,12 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        form = JSONUploadForm(files={"json_file": uploaded_file2})
+        form = JSONUploadForm(data={"upload_type": "files"}, files={"json_files": [uploaded_file2]})
         self.assertFalse(form.is_valid())
-        self.assertIn("json_file", form.errors)
+        self.assertIn("json_files", form.errors)
 
-        error_message = form.errors["json_file"][0]
-        self.assertIn("already been uploaded", error_message)
+        error_message = form.errors["json_files"][0]
+        self.assertIn("Already uploaded", error_message)
         self.assertIn("Existing session", error_message)
 
     def test_enhanced_error_message_with_link(self):
@@ -246,7 +246,7 @@ class DuplicateFileTests(TestCase):
         )
 
         # Upload first time through view to create session
-        self.client.post(reverse("home"), {"json_file": uploaded_file1})
+        self.client.post(reverse("home"), {"json_files": uploaded_file1, "upload_type": "files"})
         session = Session.objects.first()
 
         # Now test form validation with enhanced error message
@@ -256,14 +256,13 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        form = JSONUploadForm(files={"json_file": uploaded_file2})
+        form = JSONUploadForm(data={"upload_type": "files"}, files={"json_files": [uploaded_file2]})
         self.assertFalse(form.is_valid())
 
-        error_message = str(form.errors["json_file"][0])
-        self.assertIn("already been uploaded", error_message)
+        error_message = str(form.errors["json_files"][0])
+        self.assertIn("Already uploaded", error_message)
         self.assertIn(f"/session/{session.pk}/", error_message)  # Check for URL
         self.assertIn('target="_blank"', error_message)  # Check for new tab
-        self.assertIn("Click the link to view", error_message)
 
     def test_error_message_formatting(self):
         """Test that error message has proper date/time formatting"""
@@ -274,7 +273,7 @@ class DuplicateFileTests(TestCase):
             "test.json", json_content.encode("utf-8"), content_type="application/json"
         )
 
-        self.client.post(reverse("home"), {"json_file": uploaded_file1})
+        self.client.post(reverse("home"), {"json_files": uploaded_file1, "upload_type": "files"})
         session = Session.objects.first()
 
         # Test form validation error message formatting
@@ -284,10 +283,10 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        form = JSONUploadForm(files={"json_file": uploaded_file2})
+        form = JSONUploadForm(data={"upload_type": "files"}, files={"json_files": [uploaded_file2]})
         self.assertFalse(form.is_valid())
 
-        error_message = str(form.errors["json_file"][0])
+        error_message = str(form.errors["json_files"][0])
         # Check for enhanced date format "YYYY-MM-DD at HH:MM"
         expected_date_format = session.upload_date.strftime("%Y-%m-%d at %H:%M")
         self.assertIn(expected_date_format, error_message)
@@ -301,7 +300,7 @@ class DuplicateFileTests(TestCase):
             "test.json", json_content.encode("utf-8"), content_type="application/json"
         )
 
-        response1 = self.client.post(reverse("home"), {"json_file": uploaded_file1})
+        response1 = self.client.post(reverse("home"), {"json_files": uploaded_file1, "upload_type": "files"})
         self.assertEqual(response1.status_code, 302)  # Success
 
         # Try to upload same content again
@@ -311,7 +310,7 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        response2 = self.client.post(reverse("home"), {"json_file": uploaded_file2})
+        response2 = self.client.post(reverse("home"), {"json_files": uploaded_file2, "upload_type": "files"})
 
         # Check that the enhanced error container appears
         self.assertEqual(response2.status_code, 200)
@@ -319,7 +318,7 @@ class DuplicateFileTests(TestCase):
         self.assertContains(response2, "Duplicate File Detected")
         self.assertContains(response2, "bi-exclamation-triangle-fill")
         self.assertContains(response2, "border-start border-danger border-4")
-        self.assertContains(response2, "already been uploaded")
+        self.assertContains(response2, "Already uploaded")
 
     def test_standard_error_display_for_non_duplicate_errors(self):
         """Test that non-duplicate errors still use standard display"""
@@ -332,7 +331,7 @@ class DuplicateFileTests(TestCase):
             content_type="application/json",
         )
 
-        response = self.client.post(reverse("home"), {"json_file": uploaded_file})
+        response = self.client.post(reverse("home"), {"json_files": uploaded_file, "upload_type": "files"})
 
         # Should show standard error display, not the enhanced duplicate container
         self.assertEqual(response.status_code, 200)
