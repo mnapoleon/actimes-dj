@@ -228,6 +228,7 @@ class StatisticsAccuracyTests(BaseTestCase):
         """Create more complex test data"""
         # Add more laps with varying performance, using different car_index for different drivers
         test_laps = [
+            {'lap': 1, 'driver': 'TestDriver1', 'car_index': 0, 'time': 120.0, 'sectors': [40.0, 41.0, 40.0]},
             {'lap': 2, 'driver': 'TestDriver1', 'car_index': 0, 'time': 122.0, 'sectors': [41.0, 41.0, 40.0]},
             {'lap': 3, 'driver': 'TestDriver1', 'car_index': 0, 'time': 121.5, 'sectors': [40.5, 41.0, 40.0]},
             {'lap': 4, 'driver': 'TestDriver1', 'car_index': 0, 'time': 123.0, 'sectors': [41.5, 41.0, 40.5]},
