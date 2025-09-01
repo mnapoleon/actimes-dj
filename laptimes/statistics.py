@@ -146,6 +146,7 @@ class SessionStatisticsCalculator:
             for lap_number in unique_lap_numbers:
                 try:
                     lap = all_laps.get(driver_name=driver, lap_number=lap_number)
+                    # Store with integer keys for template compatibility
                     chart_data[driver][lap_number] = lap.total_time
                 except Lap.DoesNotExist:
                     chart_data[driver][lap_number] = None

@@ -428,10 +428,12 @@ class SessionDetailView(ListView):
             # Attach sector highlight information
             lap.sector_highlights = {}
             for idx in range(context["sector_count"]):
+                # Convert integer index to string for lookup
+                idx_str = str(idx)
                 lap.sector_highlights[idx] = {
-                    "fastest": context["sector_highlights"].get(idx, {}).get("fastest"),
-                    "slowest": context["sector_highlights"].get(idx, {}).get("slowest"),
-                    "pb": driver_pb_sectors.get(lap.driver_name, {}).get(idx),
+                    "fastest": context["sector_highlights"].get(idx_str, {}).get("fastest"),
+                    "slowest": context["sector_highlights"].get(idx_str, {}).get("slowest"),
+                    "pb": driver_pb_sectors.get(lap.driver_name, {}).get(idx_str),
                 }
 
         return context
