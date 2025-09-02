@@ -107,19 +107,26 @@ coverage html
    python -m black laptimes/
    ```
 
-2. **Linting** (Flake8):
+2. **Import Sorting** (isort):
+   ```bash
+   python -m isort laptimes/ --check-only
+   # If sorting needed:
+   python -m isort laptimes/
+   ```
+
+3. **Linting** (Flake8):
    ```bash
    python -m flake8 laptimes/
    ```
    Note: DJ01 warnings on `display_name` CharField fields are acceptable as they use `null=True` appropriately for optional fields.
 
-3. **Tests** (All must pass):
+4. **Tests** (All must pass):
    ```bash
    python manage.py test
    ```
    All 70 tests must pass before pushing.
 
-4. **Type Checking** (Optional but recommended):
+5. **Type Checking** (Optional but recommended):
    ```bash
    python -m mypy laptimes/ --ignore-missing-imports
    ```
@@ -128,6 +135,7 @@ coverage html
 ```bash
 # Run all checks in sequence
 python -m black laptimes/ --check && \
+python -m isort laptimes/ --check-only && \
 python -m flake8 laptimes/ && \
 python manage.py test && \
 echo "All checks passed! Ready to push."
@@ -264,8 +272,9 @@ NEVER proactively create documentation files (*.md) or README files. Only create
 
 **MANDATORY PRE-PUSH CHECKLIST FOR CLAUDE CODE:**
 1. ✅ Format code: `python -m black laptimes/`
-2. ✅ Check linting: `python -m flake8 laptimes/`  
-3. ✅ Run tests: `python manage.py test` (all 70 tests must pass)
-4. ✅ Only then proceed with git add, commit, and push
+2. ✅ Sort imports: `python -m isort laptimes/`
+3. ✅ Check linting: `python -m flake8 laptimes/`  
+4. ✅ Run tests: `python manage.py test` (all 70 tests must pass)
+5. ✅ Only then proceed with git add, commit, and push
 
 FAILURE TO FOLLOW THIS CHECKLIST IS UNACCEPTABLE.

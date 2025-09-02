@@ -62,7 +62,7 @@ class IntegrationTests(TestCase):
         self.assertEqual(upload_response.status_code, 302)
 
         # Verify session was created
-        from ..models import Track, Car
+        from ..models import Car, Track
 
         monza_track = Track.objects.get(code="Monza")
         ferrari_car = Car.objects.get(code="Ferrari")

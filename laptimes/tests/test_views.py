@@ -71,7 +71,7 @@ class HomeViewTests(BaseTestCase, ViewTestMixin):
         self.assertEqual(response.status_code, 302)  # Redirect after success
 
         # Check that session was created
-        from ..models import Track, Car
+        from ..models import Car, Track
 
         self.assertTrue(Track.objects.filter(code="Silverstone").exists())
         self.assertTrue(Car.objects.filter(code="Formula 1").exists())
