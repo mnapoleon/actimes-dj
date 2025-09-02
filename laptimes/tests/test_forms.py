@@ -114,9 +114,11 @@ class SessionEditFormTests(BaseTestCase, FormTestMixin):
     def setUp(self):
         super().setUp()
         # Override the default session for this test
-        self.session = Session.objects.create(
-            track="Original Track",
-            car="Original Car",
+        original_track = self.create_test_track(code="original_track", display_name="Original Track")
+        original_car = self.create_test_car(code="original_car", display_name="Original Car")
+        self.session = self.create_test_session(
+            track=original_track,
+            car=original_car,
             session_type="Practice",
             file_name="test.json",
         )
@@ -124,48 +126,54 @@ class SessionEditFormTests(BaseTestCase, FormTestMixin):
     def test_form_initialization(self):
         """Test form initializes with session data"""
         form = SessionEditForm(instance=self.session)
-        self.assertEqual(form.fields["track_select"].initial, "Original Track")
-        self.assertEqual(form.fields["car_select"].initial, "Original Car")
+        self.assertEqual(form.fields["track_choice"].initial, self.session.track)
+        self.assertEqual(form.fields["car_choice"].initial, self.session.car)
 
     def test_track_text_input(self):
         """Test using text input for track"""
         form_data = {
-            "track_select": "",
-            "track_text": "New Track",
-            "car_select": "Original Car",
-            "car_text": "",
+            "track_choice": "",
+            "track_new_code": "new_track_code",
+            "track_new_display": "New Track",
+            "car_choice": self.session.car.id,
+            "car_new_code": "",
+            "car_new_display": "",
             "session_name": "Test Session",
             "upload_date": timezone.now().strftime("%Y-%m-%dT%H:%M"),
         }
         form = SessionEditForm(data=form_data, instance=self.session)
         self.assertFormValid(form)
-        self.assertEqual(form.cleaned_data["track"], "New Track")
+        self.assertEqual(form.cleaned_data["track"].display_name, "New Track")
 
     def test_car_text_input(self):
         """Test using text input for car"""
         form_data = {
-            "track_select": "Original Track",
-            "track_text": "",
-            "car_select": "",
-            "car_text": "New Car",
+            "track_choice": self.session.track.id,
+            "track_new_code": "",
+            "track_new_display": "",
+            "car_choice": "",
+            "car_new_code": "new_car_code",
+            "car_new_display": "New Car",
             "session_name": "Test Session",
             "upload_date": timezone.now().strftime("%Y-%m-%dT%H:%M"),
         }
         form = SessionEditForm(data=form_data, instance=self.session)
         self.assertFormValid(form)
-        self.assertEqual(form.cleaned_data["car"], "New Car")
+        self.assertEqual(form.cleaned_data["car"].display_name, "New Car")
 
     def test_missing_track_and_car(self):
         """Test form validation when both track fields are empty"""
         form_data = {
-            "track_select": "",
-            "track_text": "",
-            "car_select": "Original Car",
-            "car_text": "",
+            "track_choice": "",
+            "track_new_code": "",
+            "track_new_display": "",
+            "car_choice": self.session.car.id,
+            "car_new_code": "",
+            "car_new_display": "",
             "session_name": "Test Session",
             "upload_date": timezone.now().strftime("%Y-%m-%dT%H:%M"),
         }
         form = SessionEditForm(data=form_data, instance=self.session)
         self.assertFormInvalid(
-            form, {"track_select": ["Please select or enter a track name."]}
+            form, {"__all__": ["Please select an existing track or provide a code for a new track."]}
         )

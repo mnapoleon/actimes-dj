@@ -700,8 +700,8 @@ def session_data_api(_request, pk):
     data = {
         "session": {
             "id": session.id,
-            "track": session.track,
-            "car": session.car,
+            "track": session.track.get_display_name(),
+            "car": session.car.get_display_name(),
             "session_type": session.session_type,
         },
         "laps": [
