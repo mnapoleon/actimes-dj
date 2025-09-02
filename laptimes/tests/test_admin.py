@@ -3,7 +3,7 @@
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
 
-from ..models import Session
+from ..models import Car, Session, Track
 
 
 class AdminInterfaceTests(TestCase):
@@ -16,10 +16,22 @@ class AdminInterfaceTests(TestCase):
         self.client = Client()
         self.client.login(username="admin", password="testpass123")
 
+        # Create test tracks and cars
+        self.test_track = Track.objects.create(
+            code="test_track", display_name="Test Track"
+        )
+        self.test_car = Car.objects.create(code="test_car", display_name="Test Car")
+        self.legacy_track = Track.objects.create(
+            code="legacy_track", display_name="Legacy Track"
+        )
+        self.legacy_car = Car.objects.create(
+            code="legacy_car", display_name="Legacy Car"
+        )
+
         # Create test session with hash
         self.session_with_hash = Session.objects.create(
-            track="Test Track",
-            car="Test Car",
+            track=self.test_track,
+            car=self.test_car,
             session_type="Practice",
             file_name="test.json",
             players_data=[{"name": "Test Driver"}],
@@ -28,8 +40,8 @@ class AdminInterfaceTests(TestCase):
 
         # Create test session without hash (legacy)
         self.session_without_hash = Session.objects.create(
-            track="Legacy Track",
-            car="Legacy Car",
+            track=self.legacy_track,
+            car=self.legacy_car,
             session_type="Race",
             file_name="legacy.json",
             players_data=[{"name": "Legacy Driver"}],

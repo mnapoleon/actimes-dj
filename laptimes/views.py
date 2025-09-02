@@ -14,7 +14,7 @@ from django.views.generic import (
 )
 
 from .forms import JSONUploadForm, SessionEditForm
-from .models import Lap, Session
+from .models import Car, Lap, Session, Track
 from .statistics import SessionStatisticsCalculator
 
 
@@ -29,16 +29,26 @@ class HomeView(ListView):
 
     def get_queryset(self):
         """Optimize queries with annotations and apply filters"""
-        queryset = Session.objects.annotate(lap_count=Count("laps"))
+        queryset = Session.objects.select_related("track", "car").annotate(
+            lap_count=Count("laps")
+        )
 
         # Apply filters
         track = self.request.GET.get("track")
         if track and track != "all":
-            queryset = queryset.filter(track=track)
+            try:
+                track_id = int(track)
+                queryset = queryset.filter(track_id=track_id)
+            except (ValueError, TypeError):
+                pass
 
         car = self.request.GET.get("car")
         if car and car != "all":
-            queryset = queryset.filter(car=car)
+            try:
+                car_id = int(car)
+                queryset = queryset.filter(car_id=car_id)
+            except (ValueError, TypeError):
+                pass
 
         session_type = self.request.GET.get("session_type")
         if session_type and session_type != "all":
@@ -69,8 +79,10 @@ class HomeView(ListView):
         if search:
             queryset = queryset.filter(
                 Q(session_name__icontains=search)
-                | Q(track__icontains=search)
-                | Q(car__icontains=search)
+                | Q(track__code__icontains=search)
+                | Q(track__display_name__icontains=search)
+                | Q(car__code__icontains=search)
+                | Q(car__display_name__icontains=search)
                 | Q(laps__driver_name__icontains=search)
             ).distinct()
 
@@ -113,22 +125,40 @@ class HomeView(ListView):
         context["per_page_options"] = [10, 20, 50, 100]
 
         # Add filter options
-        context["tracks"] = (
-            Session.objects.values_list("track", flat=True).distinct().order_by("track")
-        )
-        context["cars"] = (
-            Session.objects.values_list("car", flat=True).distinct().order_by("car")
-        )
+        context["tracks"] = Track.objects.all().order_by("display_name", "code")
+        context["cars"] = Car.objects.all().order_by("display_name", "code")
         context["session_types"] = (
             Session.objects.values_list("session_type", flat=True)
             .distinct()
             .order_by("session_type")
         )
 
-        # Current filter values
+        # Current filter values (convert IDs back to "all" if invalid)
+        track_filter = self.request.GET.get("track", "all")
+        car_filter = self.request.GET.get("car", "all")
+
+        # Validate that the track and car filters are valid IDs
+        if track_filter != "all":
+            try:
+                int(track_filter)
+                # Check if track exists
+                if not Track.objects.filter(id=track_filter).exists():
+                    track_filter = "all"
+            except (ValueError, TypeError):
+                track_filter = "all"
+
+        if car_filter != "all":
+            try:
+                int(car_filter)
+                # Check if car exists
+                if not Car.objects.filter(id=car_filter).exists():
+                    car_filter = "all"
+            except (ValueError, TypeError):
+                car_filter = "all"
+
         context["current_filters"] = {
-            "track": self.request.GET.get("track", "all"),
-            "car": self.request.GET.get("car", "all"),
+            "track": track_filter,
+            "car": car_filter,
             "session_type": self.request.GET.get("session_type", "all"),
             "date_from": self.request.GET.get("date_from", ""),
             "date_to": self.request.GET.get("date_to", ""),
@@ -176,9 +206,16 @@ class HomeView(ListView):
                 session_type = self._extract_session_type(data, session_data)
 
                 # Get car model from the first player (assuming all use same car)
-                car_model = "Unknown"
+                car_code = "Unknown"
                 if data["players"] and len(data["players"]) > 0:
-                    car_model = data["players"][0].get("car", "Unknown")
+                    car_code = data["players"][0].get("car", "Unknown")
+
+                # Create or get Track object
+                track_code = data["track"]
+                track, created = Track.objects.get_or_create(code=track_code)
+
+                # Create or get Car object
+                car, created = Car.objects.get_or_create(code=car_code)
 
                 # Use the file upload time as the default upload_date
                 from django.utils import timezone
@@ -187,8 +224,8 @@ class HomeView(ListView):
 
                 # Create Session object
                 session = Session.objects.create(
-                    track=data["track"],
-                    car=car_model,
+                    track=track,
+                    car=car,
                     session_type=session_type,
                     file_name=json_file.name,
                     players_data=data["players"],
@@ -663,8 +700,8 @@ def session_data_api(_request, pk):
     data = {
         "session": {
             "id": session.id,
-            "track": session.track,
-            "car": session.car,
+            "track": session.track.get_display_name(),
+            "car": session.car.get_display_name(),
             "session_type": session.session_type,
         },
         "laps": [

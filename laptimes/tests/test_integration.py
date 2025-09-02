@@ -62,9 +62,13 @@ class IntegrationTests(TestCase):
         self.assertEqual(upload_response.status_code, 302)
 
         # Verify session was created
-        session = Session.objects.get(track="Monza")
+        from ..models import Car, Track
+
+        monza_track = Track.objects.get(code="Monza")
+        ferrari_car = Car.objects.get(code="Ferrari")
+        session = Session.objects.get(track=monza_track)
         self.assertEqual(session.session_type, "Qualifying")
-        self.assertEqual(session.car, "Ferrari")
+        self.assertEqual(session.car, ferrari_car)
 
         # Verify laps were created
         laps = Lap.objects.filter(session=session)

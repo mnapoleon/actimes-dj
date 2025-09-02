@@ -8,19 +8,16 @@ from django.urls import reverse
 
 from ..forms import JSONUploadForm
 from ..models import Lap, Session
+from .base import BaseTestCase
 
 
-class DriverDeletionTests(TestCase):
+class DriverDeletionTests(BaseTestCase):
     """Test cases for driver deletion functionality"""
 
     def setUp(self):
+        super().setUp()
         self.client = Client()
-        self.session = Session.objects.create(
-            track="Test Track",
-            car="Test Car",
-            session_type="Practice",
-            file_name="test.json",
-        )
+        # Use session from BaseTestCase
         # Create multiple laps for the same driver
         for i in range(3):
             Lap.objects.create(

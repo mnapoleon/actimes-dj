@@ -1,6 +1,34 @@
 from django.contrib import admin
 
-from .models import Lap, Session
+from .models import Car, Lap, Session, Track
+
+
+@admin.register(Car)
+class CarAdmin(admin.ModelAdmin):
+    list_display = ["code", "display_name", "session_count", "created_at", "updated_at"]
+    list_filter = ["created_at", "updated_at"]
+    search_fields = ["code", "display_name"]
+    readonly_fields = ["created_at", "updated_at"]
+    ordering = ["display_name", "code"]
+
+    def session_count(self, obj):
+        return obj.sessions.count()
+
+    session_count.short_description = "Sessions"
+
+
+@admin.register(Track)
+class TrackAdmin(admin.ModelAdmin):
+    list_display = ["code", "display_name", "session_count", "created_at", "updated_at"]
+    list_filter = ["created_at", "updated_at"]
+    search_fields = ["code", "display_name"]
+    readonly_fields = ["created_at", "updated_at"]
+    ordering = ["display_name", "code"]
+
+    def session_count(self, obj):
+        return obj.sessions.count()
+
+    session_count.short_description = "Sessions"
 
 
 @admin.register(Session)
@@ -14,7 +42,15 @@ class SessionAdmin(admin.ModelAdmin):
         "file_hash_short",
     ]
     list_filter = ["session_type", "track", "car", "upload_date"]
-    search_fields = ["track", "car", "file_name", "file_hash"]
+    search_fields = [
+        "track__code",
+        "track__display_name",
+        "car__code",
+        "car__display_name",
+        "file_name",
+        "file_hash",
+    ]
+    list_select_related = ["track", "car"]
     readonly_fields = ["upload_date", "file_hash", "file_hash_display"]
     fieldsets = [
         (
@@ -60,9 +96,19 @@ class LapAdmin(admin.ModelAdmin):
         "tyre_compound",
         "cuts",
     ]
-    list_filter = ["session__track", "driver_name", "tyre_compound"]
-    search_fields = ["driver_name", "session__track", "session__car"]
+    list_filter = ["session__track", "session__car", "driver_name", "tyre_compound"]
+    search_fields = [
+        "driver_name",
+        "session__track__code",
+        "session__track__display_name",
+        "session__car__code",
+        "session__car__display_name",
+    ]
     list_select_related = ["session"]
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("session")
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("session", "session__track", "session__car")
+        )

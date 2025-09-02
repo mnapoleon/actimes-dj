@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import Session
+from .models import Car, Session, Track
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -68,33 +68,65 @@ class MultipleFileField(forms.FileField):
 class SessionEditForm(forms.ModelForm):
     """Form for editing session information"""
 
-    track_select = forms.ChoiceField(
-        label="Track (choose or enter new)",
+    track_choice = forms.ModelChoiceField(
+        queryset=Track.objects.all(),
+        label="Track (choose existing)",
         required=False,
         widget=forms.Select(attrs={"class": "form-select"}),
+        empty_label="— Select a track —",
     )
-    track_text = forms.CharField(
-        label="Or enter a new track",
+    track_new_code = forms.CharField(
+        label="Or create new track (code)",
         required=False,
         widget=forms.TextInput(
-            attrs={"class": "form-control", "placeholder": "Custom track name"}
+            attrs={
+                "class": "form-control",
+                "placeholder": "Track code (e.g., 'silverstone_gp')",
+            }
         ),
+        help_text="This will be used to match JSON imports",
     )
-    track = forms.CharField(required=False, widget=forms.HiddenInput())
+    track_new_display = forms.CharField(
+        label="Display name for new track",
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Track display name (e.g., 'Silverstone Grand Prix')",
+            }
+        ),
+        help_text="Human-readable name shown in the interface",
+    )
 
-    car_select = forms.ChoiceField(
-        label="Car (choose or enter new)",
+    car_choice = forms.ModelChoiceField(
+        queryset=Car.objects.all(),
+        label="Car (choose existing)",
         required=False,
         widget=forms.Select(attrs={"class": "form-select"}),
+        empty_label="— Select a car —",
     )
-    car_text = forms.CharField(
-        label="Or enter a new car",
+    car_new_code = forms.CharField(
+        label="Or create new car (code)",
         required=False,
         widget=forms.TextInput(
-            attrs={"class": "form-control", "placeholder": "Custom car name"}
+            attrs={
+                "class": "form-control",
+                "placeholder": "Car code (e.g., 'ks_ferrari_sf70h')",
+            }
         ),
+        help_text="This will be used to match JSON imports",
     )
-    car = forms.CharField(required=False, widget=forms.HiddenInput())
+    car_new_display = forms.CharField(
+        label="Display name for new car",
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Car display name (e.g., 'Ferrari SF70H')",
+            }
+        ),
+        help_text="Human-readable name shown in the interface",
+    )
 
     class Meta:
         model = Session
@@ -106,9 +138,6 @@ class SessionEditForm(forms.ModelForm):
                     "placeholder": "Enter a custom session name (optional)",
                 }
             ),
-            "car": forms.TextInput(
-                attrs={"class": "form-control", "placeholder": "Car model"}
-            ),
             "upload_date": forms.DateTimeInput(
                 attrs={
                     "class": "form-control",
@@ -119,78 +148,85 @@ class SessionEditForm(forms.ModelForm):
         }
         labels = {
             "session_name": "Session Name",
-            "track": "Track",
-            "car": "Car",
             "upload_date": "Upload Date",
         }
         help_texts = {
             "session_name": "Optional custom name for this session",
-            "track": "The track where this session took place",
-            "car": "The car model used in this session",
             "upload_date": "Date and time the session was uploaded",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Populate dropdown with all distinct track names
-        tracks = (
-            Session.objects.values_list("track", flat=True).distinct().order_by("track")
+        # Make track and car fields not required since we handle them in clean()
+        self.fields["track"].required = False
+        self.fields["car"].required = False
+
+        # Order querysets by display name with fallback to code
+        self.fields["track_choice"].queryset = Track.objects.all().order_by(
+            "display_name", "code"
         )
-        self.fields["track_select"].choices = [("", "— Select a track —")] + [
-            (t, t) for t in tracks if t
-        ]
-        # Populate dropdown with all distinct car names
-        cars = Session.objects.values_list("car", flat=True).distinct().order_by("car")
-        self.fields["car_select"].choices = [("", "— Select a car —")] + [
-            (c, c) for c in cars if c
-        ]
-        # Set initial values for the fields
-        if self.instance:
-            if self.instance.track:
-                self.fields["track_select"].initial = self.instance.track
-                self.fields["track_text"].initial = ""
-                self.fields["track"].initial = self.instance.track
-            if self.instance.car:
-                self.fields["car_select"].initial = self.instance.car
-                self.fields["car_text"].initial = ""
-                self.fields["car"].initial = self.instance.car
+        self.fields["car_choice"].queryset = Car.objects.all().order_by(
+            "display_name", "code"
+        )
+
+        # Set initial values
+        if self.instance and self.instance.pk:
+            self.fields["track_choice"].initial = self.instance.track
+            self.fields["car_choice"].initial = self.instance.car
             if self.instance.upload_date:
-                # Format for datetime-local input
                 self.fields["upload_date"].initial = self.instance.upload_date.strftime(
                     "%Y-%m-%dT%H:%M"
                 )
 
     def clean(self):
         cleaned_data = super().clean()
+
         # Track logic
-        track_select = cleaned_data.get("track_select")
-        track_text = cleaned_data.get("track_text")
-        if track_text:
-            cleaned_data["track"] = track_text
-        elif track_select:
-            cleaned_data["track"] = track_select
+        track_choice = cleaned_data.get("track_choice")
+        track_new_code = cleaned_data.get("track_new_code")
+        track_new_display = cleaned_data.get("track_new_display")
+
+        if track_choice:
+            cleaned_data["track"] = track_choice
+        elif track_new_code:
+            # Create or get new track
+            track, created = Track.objects.get_or_create(
+                code=track_new_code,
+                defaults={"display_name": track_new_display or None},
+            )
+            if not created and track_new_display:
+                # Update display name if provided
+                track.display_name = track_new_display
+                track.save()
+            cleaned_data["track"] = track
         else:
-            self.add_error("track_select", "Please select or enter a track name.")
-        self.fields["track"].initial = cleaned_data.get("track", "")
+            raise ValidationError(
+                "Please select an existing track or provide a code for a new track."
+            )
 
         # Car logic
-        car_select = cleaned_data.get("car_select")
-        car_text = cleaned_data.get("car_text")
-        if car_text:
-            cleaned_data["car"] = car_text
-        elif car_select:
-            cleaned_data["car"] = car_select
+        car_choice = cleaned_data.get("car_choice")
+        car_new_code = cleaned_data.get("car_new_code")
+        car_new_display = cleaned_data.get("car_new_display")
+
+        if car_choice:
+            cleaned_data["car"] = car_choice
+        elif car_new_code:
+            # Create or get new car
+            car, created = Car.objects.get_or_create(
+                code=car_new_code, defaults={"display_name": car_new_display or None}
+            )
+            if not created and car_new_display:
+                # Update display name if provided
+                car.display_name = car_new_display
+                car.save()
+            cleaned_data["car"] = car
         else:
-            self.add_error("car_select", "Please select or enter a car name.")
-        self.fields["car"].initial = cleaned_data.get("car", "")
+            raise ValidationError(
+                "Please select an existing car or provide a code for a new car."
+            )
 
         return cleaned_data
-
-    def save(self, commit=True):
-        # Ensure the correct track and car values are set on the instance
-        self.instance.track = self.cleaned_data.get("track", self.instance.track)
-        self.instance.car = self.cleaned_data.get("car", self.instance.car)
-        return super().save(commit=commit)
 
 
 class JSONUploadForm(forms.Form):

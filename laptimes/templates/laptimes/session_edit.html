@@ -44,49 +44,118 @@
                         {% endif %}
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Track</label>
-                        {{ form.track_select }}
-                        <div class="form-text">Choose a track from previous sessions, or enter a new one below.</div>
-                        {% if form.track_select.errors %}
-                            <div class="text-danger">
-                                {% for error in form.track_select.errors %}
-                                    <small>{{ error }}</small>
-                                {% endfor %}
+                    <!-- Track Selection -->
+                    <div class="mb-4">
+                        <div class="mb-3">
+                            <label for="{{ form.track_choice.id_for_label }}" class="form-label">
+                                {{ form.track_choice.label }}
+                            </label>
+                            {{ form.track_choice }}
+                            {% if form.track_choice.help_text %}
+                                <div class="form-text">{{ form.track_choice.help_text }}</div>
+                            {% endif %}
+                            {% if form.track_choice.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.track_choice.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="my-3 text-center text-muted">— or create new track —</div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.track_new_code.id_for_label }}" class="form-label">
+                                    {{ form.track_new_code.label }}
+                                </label>
+                                {{ form.track_new_code }}
+                                {% if form.track_new_code.help_text %}
+                                    <div class="form-text">{{ form.track_new_code.help_text }}</div>
+                                {% endif %}
+                                {% if form.track_new_code.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.track_new_code.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
-                        {% endif %}
-                        <div class="my-2 text-center text-muted">— or —</div>
-                        {{ form.track_text }}
-                        {% if form.track_text.errors %}
-                            <div class="text-danger">
-                                {% for error in form.track_text.errors %}
-                                    <small>{{ error }}</small>
-                                {% endfor %}
+                            <div class="col-md-6">
+                                <label for="{{ form.track_new_display.id_for_label }}" class="form-label">
+                                    {{ form.track_new_display.label }}
+                                </label>
+                                {{ form.track_new_display }}
+                                {% if form.track_new_display.help_text %}
+                                    <div class="form-text">{{ form.track_new_display.help_text }}</div>
+                                {% endif %}
+                                {% if form.track_new_display.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.track_new_display.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
-                        {% endif %}
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Car</label>
-                        {{ form.car_select }}
-                        <div class="form-text">Choose a car from previous sessions, or enter a new one below.</div>
-                        {% if form.car_select.errors %}
-                            <div class="text-danger">
-                                {% for error in form.car_select.errors %}
-                                    <small>{{ error }}</small>
-                                {% endfor %}
+                    <!-- Car Selection -->
+                    <div class="mb-4">
+                        <div class="mb-3">
+                            <label for="{{ form.car_choice.id_for_label }}" class="form-label">
+                                {{ form.car_choice.label }}
+                            </label>
+                            {{ form.car_choice }}
+                            {% if form.car_choice.help_text %}
+                                <div class="form-text">{{ form.car_choice.help_text }}</div>
+                            {% endif %}
+                            {% if form.car_choice.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.car_choice.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="my-3 text-center text-muted">— or create new car —</div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="{{ form.car_new_code.id_for_label }}" class="form-label">
+                                    {{ form.car_new_code.label }}
+                                </label>
+                                {{ form.car_new_code }}
+                                {% if form.car_new_code.help_text %}
+                                    <div class="form-text">{{ form.car_new_code.help_text }}</div>
+                                {% endif %}
+                                {% if form.car_new_code.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.car_new_code.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
-                        {% endif %}
-                        <div class="my-2 text-center text-muted">— or —</div>
-                        {{ form.car_text }}
-                        {% if form.car_text.errors %}
-                            <div class="text-danger">
-                                {% for error in form.car_text.errors %}
-                                    <small>{{ error }}</small>
-                                {% endfor %}
+                            <div class="col-md-6">
+                                <label for="{{ form.car_new_display.id_for_label }}" class="form-label">
+                                    {{ form.car_new_display.label }}
+                                </label>
+                                {{ form.car_new_display }}
+                                {% if form.car_new_display.help_text %}
+                                    <div class="form-text">{{ form.car_new_display.help_text }}</div>
+                                {% endif %}
+                                {% if form.car_new_display.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.car_new_display.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
-                        {% endif %}
-                        {{ form.car }}
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -116,25 +185,37 @@
                 </form>
                 {% block extra_js %}
                 <script>
-                  // Optional: auto-clear text input if dropdown is changed
-                  const trackSelect = document.getElementById('{{ form.track_select.id_for_label }}');
-                  const trackText = document.getElementById('{{ form.track_text.id_for_label }}');
-                  if (trackSelect && trackText) {
-                    trackSelect.addEventListener('change', function() {
-                      if (this.value) trackText.value = '';
+                  // Auto-clear new track fields if existing track is selected
+                  const trackChoice = document.getElementById('{{ form.track_choice.id_for_label }}');
+                  const trackNewCode = document.getElementById('{{ form.track_new_code.id_for_label }}');
+                  const trackNewDisplay = document.getElementById('{{ form.track_new_display.id_for_label }}');
+                  
+                  if (trackChoice && trackNewCode && trackNewDisplay) {
+                    trackChoice.addEventListener('change', function() {
+                      if (this.value) {
+                        trackNewCode.value = '';
+                        trackNewDisplay.value = '';
+                      }
                     });
-                    trackText.addEventListener('input', function() {
-                      if (this.value) trackSelect.value = '';
+                    trackNewCode.addEventListener('input', function() {
+                      if (this.value) trackChoice.value = '';
                     });
                   }
-                  const carSelect = document.getElementById('{{ form.car_select.id_for_label }}');
-                  const carText = document.getElementById('{{ form.car_text.id_for_label }}');
-                  if (carSelect && carText) {
-                    carSelect.addEventListener('change', function() {
-                      if (this.value) carText.value = '';
+
+                  // Auto-clear new car fields if existing car is selected
+                  const carChoice = document.getElementById('{{ form.car_choice.id_for_label }}');
+                  const carNewCode = document.getElementById('{{ form.car_new_code.id_for_label }}');
+                  const carNewDisplay = document.getElementById('{{ form.car_new_display.id_for_label }}');
+                  
+                  if (carChoice && carNewCode && carNewDisplay) {
+                    carChoice.addEventListener('change', function() {
+                      if (this.value) {
+                        carNewCode.value = '';
+                        carNewDisplay.value = '';
+                      }
                     });
-                    carText.addEventListener('input', function() {
-                      if (this.value) carSelect.value = '';
+                    carNewCode.addEventListener('input', function() {
+                      if (this.value) carChoice.value = '';
                     });
                   }
                 </script>

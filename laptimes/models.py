@@ -7,12 +7,72 @@ from django.dispatch import receiver
 from django.utils import timezone
 
 
+class Track(models.Model):
+    """Model representing a racing track"""
+
+    code = models.CharField(
+        max_length=200, unique=True, help_text="Track name as imported from JSON files"
+    )
+    display_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Human-readable track name for display",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["display_name", "code"]
+        indexes = [
+            models.Index(fields=["code"]),
+            models.Index(fields=["display_name"]),
+        ]
+
+    def __str__(self):
+        return self.display_name if self.display_name else self.code
+
+    def get_display_name(self):
+        """Get the display name, falling back to code if display_name is empty"""
+        return self.display_name if self.display_name else self.code
+
+
+class Car(models.Model):
+    """Model representing a racing car"""
+
+    code = models.CharField(
+        max_length=200, unique=True, help_text="Car name as imported from JSON files"
+    )
+    display_name = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Human-readable car name for display",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["display_name", "code"]
+        indexes = [
+            models.Index(fields=["code"]),
+            models.Index(fields=["display_name"]),
+        ]
+
+    def __str__(self):
+        return self.display_name if self.display_name else self.code
+
+    def get_display_name(self):
+        """Get the display name, falling back to code if display_name is empty"""
+        return self.display_name if self.display_name else self.code
+
+
 class Session(models.Model):
     """Model representing a racing session"""
 
     session_name = models.CharField(max_length=200, blank=True)
-    track = models.CharField(max_length=200)
-    car = models.CharField(max_length=200)
+    track = models.ForeignKey(Track, on_delete=models.CASCADE, related_name="sessions")
+    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name="sessions")
     # e.g., 'Practice', 'Qualifying', 'Race'
     session_type = models.CharField(max_length=50)
     upload_date = models.DateTimeField(default=timezone.now)
@@ -51,9 +111,11 @@ class Session(models.Model):
         ]
 
     def __str__(self):
+        track_name = self.track.get_display_name() if self.track else "Unknown Track"
+        car_name = self.car.get_display_name() if self.car else "Unknown Car"
         if self.session_name:
-            return f"{self.session_name} - {self.track} - {self.car}"
-        return f"{self.track} - {self.car} ({self.session_type})"
+            return f"{self.session_name} - {track_name} - {car_name}"
+        return f"{track_name} - {car_name} ({self.session_type})"
 
     def get_fastest_lap(self):
         """

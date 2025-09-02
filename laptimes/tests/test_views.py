@@ -3,7 +3,7 @@
 import json
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, TestCase
+from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
@@ -29,12 +29,7 @@ class HomeViewTests(BaseTestCase, ViewTestMixin):
 
     def test_home_view_displays_sessions(self):
         """Test that recent sessions are displayed"""
-        Session.objects.create(
-            track="Test Track",
-            car="Test Car",
-            session_type="Practice",
-            file_name="test.json",
-        )
+        # Session already created in parent setUp, so just test that it's displayed
         response = self.client.get(self.url)
         self.assertContains(response, "Test Track")
         self.assertContains(response, "Test Car")
@@ -76,9 +71,13 @@ class HomeViewTests(BaseTestCase, ViewTestMixin):
         self.assertEqual(response.status_code, 302)  # Redirect after success
 
         # Check that session was created
-        self.assertTrue(Session.objects.filter(track="Silverstone").exists())
-        session = Session.objects.get(track="Silverstone")
-        self.assertEqual(session.car, "Formula 1")
+        from ..models import Car, Track
+
+        self.assertTrue(Track.objects.filter(code="Silverstone").exists())
+        self.assertTrue(Car.objects.filter(code="Formula 1").exists())
+        silverstone_track = Track.objects.get(code="Silverstone")
+        formula1_car = Car.objects.get(code="Formula 1")
+        session = Session.objects.get(track=silverstone_track, car=formula1_car)
         self.assertEqual(session.session_type, "Practice")
 
         # Check that lap was created
@@ -116,21 +115,20 @@ class HomeViewTests(BaseTestCase, ViewTestMixin):
         )
 
         self.client.post(self.url, {"json_files": json_file, "upload_type": "files"})
-        session = Session.objects.get(track="Trackday Test Track")
+        from ..models import Track
+
+        trackday_track = Track.objects.get(code="Trackday Test Track")
+        session = Session.objects.get(track=trackday_track)
         self.assertEqual(session.session_type, "Trackday")
 
 
-class SessionDetailViewTests(TestCase):
+class SessionDetailViewTests(BaseTestCase, ViewTestMixin):
     """Test cases for the session detail view"""
 
     def setUp(self):
+        super().setUp()
         self.client = Client()
-        self.session = Session.objects.create(
-            track="Test Track",
-            car="Test Car",
-            session_type="Practice",
-            file_name="test.json",
-        )
+        # Use the session from BaseTestCase
         self.lap1 = Lap.objects.create(
             session=self.session,
             lap_number=1,
@@ -199,9 +197,11 @@ class SessionDetailViewTests(TestCase):
     def test_purple_highlighting_context(self):
         """Test that purple highlighting context variables are correctly calculated"""
         # Create a session with drivers having different best lap and optimal times
-        session = Session.objects.create(
-            track="Highlight Test Track",
-            car="Test Car",
+        highlight_track = self.create_test_track(
+            code="highlight_test", display_name="Highlight Test Track"
+        )
+        session = self.create_test_session(
+            track=highlight_track,
             session_type="Practice",
             file_name="test.json",
         )
@@ -259,17 +259,27 @@ class SessionDetailViewTests(TestCase):
     def test_chart_lap_zero_inclusion_all_sessions(self):
         """Test that lap 0 is included in chart for all session types"""
         # Create Race session
-        race_session = Session.objects.create(
-            track="Race Track",
-            car="Race Car",
+        race_track = self.create_test_track(
+            code="race_track", display_name="Race Track"
+        )
+        race_car = self.create_test_car(code="race_car", display_name="Race Car")
+        race_session = self.create_test_session(
+            track=race_track,
+            car=race_car,
             session_type="Race",
             file_name="race.json",
         )
 
         # Create Practice session
-        practice_session = Session.objects.create(
-            track="Practice Track",
-            car="Practice Car",
+        practice_track = self.create_test_track(
+            code="practice_track", display_name="Practice Track"
+        )
+        practice_car = self.create_test_car(
+            code="practice_car", display_name="Practice Car"
+        )
+        practice_session = self.create_test_session(
+            track=practice_track,
+            car=practice_car,
             session_type="Practice",
             file_name="practice.json",
         )
@@ -311,33 +321,31 @@ class SessionDetailViewTests(TestCase):
         practice_session.delete()
 
 
-class SessionEditViewTests(TestCase):
+class SessionEditViewTests(BaseTestCase, ViewTestMixin):
     """Test cases for the session edit view"""
 
     def setUp(self):
+        super().setUp()
         self.client = Client()
-        self.session = Session.objects.create(
-            track="Original Track",
-            car="Original Car",
-            session_type="Practice",
-            file_name="test.json",
-        )
+        # Use session from BaseTestCase
         self.url = reverse("session_edit", kwargs={"pk": self.session.pk})
 
     def test_session_edit_view_get(self):
         """Test GET request to session edit view"""
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Original Track")
-        self.assertContains(response, "Original Car")
+        self.assertContains(response, "Test Track")  # From BaseTestCase
+        self.assertContains(response, "Test Car")  # From BaseTestCase
 
     def test_session_edit_view_post(self):
         """Test POST request to update session"""
         form_data = {
-            "track_select": "",
-            "track_text": "Updated Track",
-            "car_select": "",
-            "car_text": "Updated Car",
+            "track_choice": "",
+            "track_new_code": "updated_track",
+            "track_new_display": "Updated Track",
+            "car_choice": "",
+            "car_new_code": "updated_car",
+            "car_new_display": "Updated Car",
             "session_name": "Updated Session",
             "upload_date": timezone.now().strftime("%Y-%m-%dT%H:%M"),
         }
@@ -348,22 +356,18 @@ class SessionEditViewTests(TestCase):
 
         # Check that session was updated
         self.session.refresh_from_db()
-        self.assertEqual(self.session.track, "Updated Track")
-        self.assertEqual(self.session.car, "Updated Car")
+        self.assertEqual(self.session.track.display_name, "Updated Track")
+        self.assertEqual(self.session.car.display_name, "Updated Car")
         self.assertEqual(self.session.session_name, "Updated Session")
 
 
-class SessionDeleteViewTests(TestCase):
+class SessionDeleteViewTests(BaseTestCase, ViewTestMixin):
     """Test cases for the session delete view"""
 
     def setUp(self):
+        super().setUp()
         self.client = Client()
-        self.session = Session.objects.create(
-            track="Test Track",
-            car="Test Car",
-            session_type="Practice",
-            file_name="test.json",
-        )
+        # Use session from BaseTestCase
         self.url = reverse("session_delete", kwargs={"pk": self.session.pk})
 
     def test_session_delete_view_get(self):

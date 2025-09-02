@@ -9,8 +9,8 @@ class SessionModelTests(BaseTestCase, ModelTestMixin):
 
     def test_session_creation(self):
         """Test that a session can be created with required fields"""
-        self.assertEqual(self.session.track, "Test Track")
-        self.assertEqual(self.session.car, "Test Car")
+        self.assertEqual(self.session.track.display_name, "Test Track")
+        self.assertEqual(self.session.car.display_name, "Test Car")
         self.assertEqual(self.session.session_type, "Practice")
         self.assertTrue(self.session.upload_date)
 
@@ -28,8 +28,10 @@ class SessionModelTests(BaseTestCase, ModelTestMixin):
 
     def test_session_ordering(self):
         """Test that sessions are ordered by upload_date descending"""
-        session2 = Session.objects.create(
-            track="Track 2", car="Car 2", session_type="Race", file_name="test2.json"
+        track2 = self.create_test_track(code="track_2", display_name="Track 2")
+        car2 = self.create_test_car(code="car_2", display_name="Car 2")
+        session2 = self.create_test_session(
+            track=track2, car=car2, session_type="Race", file_name="test2.json"
         )
         sessions = Session.objects.all()
         self.assertEqual(sessions.first(), session2)
@@ -195,9 +197,13 @@ class SessionModelTests(BaseTestCase, ModelTestMixin):
 
     def test_get_driver_statistics_empty_session(self):
         """Test driver statistics for session with no laps"""
-        empty_session = Session.objects.create(
-            track="Empty Track",
-            car="Empty Car",
+        empty_track = self.create_test_track(
+            code="empty_track", display_name="Empty Track"
+        )
+        empty_car = self.create_test_car(code="empty_car", display_name="Empty Car")
+        empty_session = self.create_test_session(
+            track=empty_track,
+            car=empty_car,
             session_type="Practice",
             file_name="empty.json",
         )
