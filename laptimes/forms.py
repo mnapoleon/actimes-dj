@@ -160,7 +160,7 @@ class SessionEditForm(forms.ModelForm):
         # Make track and car fields not required since we handle them in clean()
         self.fields["track"].required = False
         self.fields["car"].required = False
-        
+
         # Order querysets by display name with fallback to code
         self.fields["track_choice"].queryset = Track.objects.all().order_by(
             "display_name", "code"

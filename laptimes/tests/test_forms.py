@@ -6,7 +6,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 
 from ..forms import JSONUploadForm, SessionEditForm
-from ..models import Session
 from .base import BaseTestCase, FormTestMixin
 
 
