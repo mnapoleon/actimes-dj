@@ -96,6 +96,43 @@ coverage html
 - **Integration** (1 test): Complete user workflows
 - **File Management** (15 tests): Upload, duplicate detection, driver management
 
+### Code Quality & Pre-Push Requirements
+
+**IMPORTANT**: Before any `git push` operations, Claude Code must run the following checks in order:
+
+1. **Code Formatting** (Black):
+   ```bash
+   python -m black laptimes/ --check
+   # If formatting needed:
+   python -m black laptimes/
+   ```
+
+2. **Linting** (Flake8):
+   ```bash
+   python -m flake8 laptimes/
+   ```
+   Note: DJ01 warnings on `display_name` CharField fields are acceptable as they use `null=True` appropriately for optional fields.
+
+3. **Tests** (All must pass):
+   ```bash
+   python manage.py test
+   ```
+   All 70 tests must pass before pushing.
+
+4. **Type Checking** (Optional but recommended):
+   ```bash
+   python -m mypy laptimes/ --ignore-missing-imports
+   ```
+
+**Automated Pre-Push Workflow:**
+```bash
+# Run all checks in sequence
+python -m black laptimes/ --check && \
+python -m flake8 laptimes/ && \
+python manage.py test && \
+echo "All checks passed! Ready to push."
+```
+
 ### Admin Access
 - URL: http://127.0.0.1:8000/admin/
 - Username: admin
@@ -217,3 +254,18 @@ JSON files should contain:
 - Sector times stored as JSON arrays in Lap model
 - Session type parsing handles both `__quickDrive` and numeric type fields
 - Personal best and overall fastest/slowest highlighting implemented in templates
+- **CRITICAL**: Always run formatting (black), linting (flake8), and tests before any git push operations
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+
+**MANDATORY PRE-PUSH CHECKLIST FOR CLAUDE CODE:**
+1. ✅ Format code: `python -m black laptimes/`
+2. ✅ Check linting: `python -m flake8 laptimes/`  
+3. ✅ Run tests: `python manage.py test` (all 70 tests must pass)
+4. ✅ Only then proceed with git add, commit, and push
+
+FAILURE TO FOLLOW THIS CHECKLIST IS UNACCEPTABLE.

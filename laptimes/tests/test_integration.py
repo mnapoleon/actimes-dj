@@ -63,6 +63,7 @@ class IntegrationTests(TestCase):
 
         # Verify session was created
         from ..models import Track, Car
+
         monza_track = Track.objects.get(code="Monza")
         ferrari_car = Car.objects.get(code="Ferrari")
         session = Session.objects.get(track=monza_track)

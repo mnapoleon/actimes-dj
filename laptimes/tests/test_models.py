@@ -197,7 +197,9 @@ class SessionModelTests(BaseTestCase, ModelTestMixin):
 
     def test_get_driver_statistics_empty_session(self):
         """Test driver statistics for session with no laps"""
-        empty_track = self.create_test_track(code="empty_track", display_name="Empty Track")
+        empty_track = self.create_test_track(
+            code="empty_track", display_name="Empty Track"
+        )
         empty_car = self.create_test_car(code="empty_car", display_name="Empty Car")
         empty_session = self.create_test_session(
             track=empty_track,

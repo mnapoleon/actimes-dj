@@ -72,6 +72,7 @@ class HomeViewTests(BaseTestCase, ViewTestMixin):
 
         # Check that session was created
         from ..models import Track, Car
+
         self.assertTrue(Track.objects.filter(code="Silverstone").exists())
         self.assertTrue(Car.objects.filter(code="Formula 1").exists())
         silverstone_track = Track.objects.get(code="Silverstone")
@@ -115,6 +116,7 @@ class HomeViewTests(BaseTestCase, ViewTestMixin):
 
         self.client.post(self.url, {"json_files": json_file, "upload_type": "files"})
         from ..models import Track
+
         trackday_track = Track.objects.get(code="Trackday Test Track")
         session = Session.objects.get(track=trackday_track)
         self.assertEqual(session.session_type, "Trackday")
@@ -195,7 +197,9 @@ class SessionDetailViewTests(BaseTestCase, ViewTestMixin):
     def test_purple_highlighting_context(self):
         """Test that purple highlighting context variables are correctly calculated"""
         # Create a session with drivers having different best lap and optimal times
-        highlight_track = self.create_test_track(code="highlight_test", display_name="Highlight Test Track")
+        highlight_track = self.create_test_track(
+            code="highlight_test", display_name="Highlight Test Track"
+        )
         session = self.create_test_session(
             track=highlight_track,
             session_type="Practice",
@@ -255,7 +259,9 @@ class SessionDetailViewTests(BaseTestCase, ViewTestMixin):
     def test_chart_lap_zero_inclusion_all_sessions(self):
         """Test that lap 0 is included in chart for all session types"""
         # Create Race session
-        race_track = self.create_test_track(code="race_track", display_name="Race Track")
+        race_track = self.create_test_track(
+            code="race_track", display_name="Race Track"
+        )
         race_car = self.create_test_car(code="race_car", display_name="Race Car")
         race_session = self.create_test_session(
             track=race_track,
@@ -265,8 +271,12 @@ class SessionDetailViewTests(BaseTestCase, ViewTestMixin):
         )
 
         # Create Practice session
-        practice_track = self.create_test_track(code="practice_track", display_name="Practice Track")
-        practice_car = self.create_test_car(code="practice_car", display_name="Practice Car")
+        practice_track = self.create_test_track(
+            code="practice_track", display_name="Practice Track"
+        )
+        practice_car = self.create_test_car(
+            code="practice_car", display_name="Practice Car"
+        )
         practice_session = self.create_test_session(
             track=practice_track,
             car=practice_car,

@@ -113,8 +113,12 @@ class SessionEditFormTests(BaseTestCase, FormTestMixin):
     def setUp(self):
         super().setUp()
         # Override the default session for this test
-        original_track = self.create_test_track(code="original_track", display_name="Original Track")
-        original_car = self.create_test_car(code="original_car", display_name="Original Car")
+        original_track = self.create_test_track(
+            code="original_track", display_name="Original Track"
+        )
+        original_car = self.create_test_car(
+            code="original_car", display_name="Original Car"
+        )
         self.session = self.create_test_session(
             track=original_track,
             car=original_car,
@@ -174,5 +178,10 @@ class SessionEditFormTests(BaseTestCase, FormTestMixin):
         }
         form = SessionEditForm(data=form_data, instance=self.session)
         self.assertFormInvalid(
-            form, {"__all__": ["Please select an existing track or provide a code for a new track."]}
+            form,
+            {
+                "__all__": [
+                    "Please select an existing track or provide a code for a new track."
+                ]
+            },
         )

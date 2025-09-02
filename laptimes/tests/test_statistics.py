@@ -151,7 +151,9 @@ class SessionStatisticsCalculatorTests(BaseTestCase):
 
     def test_empty_session_statistics(self):
         """Test statistics calculation for an empty session"""
-        empty_track = self.create_test_track(code="empty_track", display_name="Empty Track")
+        empty_track = self.create_test_track(
+            code="empty_track", display_name="Empty Track"
+        )
         empty_car = self.create_test_car(code="empty_car", display_name="Empty Car")
         empty_session = self.create_test_session(
             track=empty_track,
@@ -173,7 +175,9 @@ class SessionStatisticsCalculatorTests(BaseTestCase):
     def test_out_lap_exclusion(self):
         """Test that out laps (lap_number = 0) are properly excluded from performance calculations"""
         # Create a session with mix of out laps and racing laps
-        outlap_track = self.create_test_track(code="outlap_track", display_name="Out Lap Track")
+        outlap_track = self.create_test_track(
+            code="outlap_track", display_name="Out Lap Track"
+        )
         outlap_car = self.create_test_car(code="outlap_car", display_name="Out Lap Car")
         session = self.create_test_session(
             track=outlap_track,
